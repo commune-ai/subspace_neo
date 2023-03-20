@@ -322,18 +322,9 @@ parameter_types! {
     pub const SubspaceInitialMinAllowedWeights: u16 = 1024;
     pub const SubspaceInitialEmissionValue: u16 = 0;
     pub const SubspaceInitialMaxWeightsLimit: u16 = 1000; // 1000/2^16 = 0.015
-    pub const SubspaceInitialValidatorBatchSize: u16 = 32; // 32
-    pub const SubspaceInitialValidatorSequenceLen: u16 = 256; // 256
-    pub const SubspaceInitialValidatorEpochLen: u16 = 100;
-    pub const SubspaceInitialValidatorEpochsPerReset: u16 = 60;
-    pub const SubspaceInitialValidatorExcludeQuantile: u16 = 6554; // 10% of u16
-    pub const SubspaceInitialValidatorPruneLen: u64 = 1;
-    pub const SubspaceInitialValidatorLogitsDivergence: u16 = 1310; // 2% of u16
     pub const SubspaceInitialScalingLawPower: u16 = 50; // 0.5
     pub const SubspaceInitialSynergyScalingLawPower: u16 = 50; // 0.5
-    pub const SubspaceInitialMaxAllowedValidators: u16 = 128;
     pub const SubspaceInitialTempo: u16 = 99;
-    pub const SubspaceInitialDifficulty: u64 = 10_000_000;
     pub const SubspaceInitialAdjustmentInterval: u16 = 100;
     pub const SubspaceInitialTargetRegistrationsPerInterval: u16 = 2;
     pub const SubspaceInitialImmunityPeriod: u16 = 4096;
@@ -343,8 +334,6 @@ parameter_types! {
     pub const SubspaceInitialBondsMovingAverage: u64 = 900_000;
     pub const SubspaceInitialDefaultTake: u16 = 11_796; // 18% honest number.
     pub const SubspaceInitialWeightsVersionKey: u64 = 0;
-    pub const SubspaceInitialMinDifficulty: u64 = 10_000_000;
-    pub const SubspaceInitialMaxDifficulty: u64 = u64::MAX / 4;
     pub const SubspaceInitialServingRateLimit: u64 = 50; 
 	pub const SubspaceInitialBurn: u64 = 1_000_000_000; // 1 tao
 	pub const SubspaceInitialMinBurn: u64 = 1_000_000_000; // 1 tao
@@ -363,28 +352,17 @@ impl pallet_subspace::Config for Runtime {
 	type InitialMinAllowedWeights = SubspaceInitialMinAllowedWeights;
 	type InitialEmissionValue = SubspaceInitialEmissionValue;
 	type InitialMaxWeightsLimit = SubspaceInitialMaxWeightsLimit;
-	type InitialValidatorBatchSize = SubspaceInitialValidatorBatchSize;
-	type InitialValidatorSequenceLen = SubspaceInitialValidatorSequenceLen;
-	type InitialValidatorEpochLen = SubspaceInitialValidatorEpochLen;
-	type InitialValidatorEpochsPerReset = SubspaceInitialValidatorEpochsPerReset;
-	type InitialValidatorExcludeQuantile = SubspaceInitialValidatorExcludeQuantile;
-	type InitialValidatorPruneLen = SubspaceInitialValidatorPruneLen;
-	type InitialValidatorLogitsDivergence = SubspaceInitialValidatorLogitsDivergence;
 	type InitialScalingLawPower = SubspaceInitialScalingLawPower;
 	type InitialSynergyScalingLawPower = SubspaceInitialSynergyScalingLawPower;
 	type InitialTempo = SubspaceInitialTempo;
-	type InitialDifficulty = SubspaceInitialDifficulty;
 	type InitialAdjustmentInterval = SubspaceInitialAdjustmentInterval;
 	type InitialTargetRegistrationsPerInterval = SubspaceInitialTargetRegistrationsPerInterval;
 	type InitialImmunityPeriod = SubspaceInitialImmunityPeriod;
 	type InitialActivityCutoff = SubspaceInitialActivityCutoff;
 	type InitialMaxRegistrationsPerBlock = SubspaceInitialMaxRegistrationsPerBlock;
 	type InitialPruningScore = SubspaceInitialPruningScore;
-	type InitialMaxAllowedValidators = SubspaceInitialMaxAllowedValidators;
 	type InitialDefaultTake = SubspaceInitialDefaultTake;
 	type InitialWeightsVersionKey = SubspaceInitialWeightsVersionKey;
-	type InitialMaxDifficulty = SubspaceInitialMaxDifficulty;
-	type InitialMinDifficulty = SubspaceInitialMinDifficulty;
 	type InitialServingRateLimit = SubspaceInitialServingRateLimit;
 	type InitialBurn = SubspaceInitialBurn;
 	type InitialMaxBurn = SubspaceInitialMaxBurn;
@@ -706,21 +684,6 @@ impl_runtime_apis! {
 	}
 
 	impl subspace_custom_rpc_runtime_api::ModuleInfoRuntimeApi<Block> for Runtime {
-		fn get_modules_lite(netuid: u16) -> Vec<u8> {
-			let result = SubspaceModule::get_modules_lite(netuid);
-			result.encode()
-		}
-
-		fn get_module_lite(netuid: u16, uid: u16) -> Vec<u8> {
-			let _result = SubspaceModule::get_module_lite(netuid, uid);
-			if _result.is_some() {
-				let result = _result.expect("Could not get ModuleInfoLite");
-				result.encode()
-			} else {
-				vec![]
-			}
-		}
-
 		fn get_modules(netuid: u16) -> Vec<u8> {
 			let result = SubspaceModule::get_modules(netuid);
 			result.encode()

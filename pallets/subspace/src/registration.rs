@@ -13,65 +13,19 @@ const LOG_TARGET: &'static str = "runtime::subspace::registration";
 
 impl<T: Config> Pallet<T> {
 
-    pub fn do_sudo_registration( 
-        origin: T::RuntimeOrigin,
-        netuid: u16, 
-        key: T::AccountId, 
-        coldkey: T::AccountId,
-        stake: u64,
-        balance: u64,
-    ) -> DispatchResult {
-        ensure_root( origin )?;        
-        ensure!( Self::if_subnet_exist( netuid ), Error::<T>::NetworkDoesNotExist ); 
-        ensure!( !Uids::<T>::contains_key( netuid, &key ), Error::<T>::AlreadyRegistered );
-
-        Self::create_account_if_non_existent( &coldkey, &key);         
-        ensure!( Self::coldkey_owns_key( &coldkey, &key ), Error::<T>::NonAssociatedColdKey );
-        Self::increase_stake_on_coldkey_key_account( &coldkey, &key, stake );
-
-        let balance_to_be_added_as_balance = Self::u64_to_balance( balance );
-        ensure!( balance_to_be_added_as_balance.is_some(), Error::<T>::CouldNotConvertToBalance );
-        Self::add_balance_to_coldkey_account( &coldkey, balance_to_be_added_as_balance.unwrap() );
-
-        let subnetwork_uid: u16;
-        let current_block_number: u64 = Self::get_current_block_as_u64();
-        let current_subnetwork_n: u16 = Self::get_subnetwork_n( netuid );
-        if current_subnetwork_n < Self::get_max_allowed_uids( netuid ) {
-            // --- 12.1.1 No replacement required, the uid appends the subnetwork.
-            // We increment the subnetwork count here but not below.
-            subnetwork_uid = current_subnetwork_n;
-
-            // --- 12.1.2 Expand subnetwork with new account.
-            Self::append_module( netuid, &key, current_block_number );
-            log::info!("add new module account");
-
-        } else {
-            // --- 12.1.1 Replacement required.
-            // We take the module with the lowest pruning score here.
-            subnetwork_uid = Self::get_module_to_prune( netuid );
-
-            // --- 12.1.1 Replace the module account with the new info.
-            Self::replace_module( netuid, subnetwork_uid, &key, current_block_number );
-            log::info!("prune module");
-        }
-    
-        log::info!("ModuleRegistered( netuid:{:?} uid:{:?} key:{:?}  ) ", netuid, subnetwork_uid, key );
-        Self::deposit_event( Event::ModuleRegistered( netuid, subnetwork_uid, key ) );
-        Ok(())
-    }
 
     // ---- The implementation for the extrinsic do_burned_registration: registering by burning TAO.
     //
     // # Args:
     // 	* 'origin': (<T as frame_system::Config>RuntimeOrigin):
-    // 		- The signature of the calling coldkey. 
-    //             Burned registers can only be created by the coldkey.
+    // 		- The signature of the calling key. 
+    //             Burned registers can only be created by the key.
     //
     // 	* 'netuid' (u16):
     // 		- The u16 network identifier.
     // 
     // 	* 'key' ( T::AccountId ):
-    // 		- Hotkey to be registered to the network.
+    // 		- key to be registered to the network.
     //   
     // # Event:
     // 	* ModuleRegistered;
@@ -90,12 +44,11 @@ impl<T: Config> Pallet<T> {
     pub fn do_burned_registration( 
         origin: T::RuntimeOrigin,
         netuid: u16, 
-        key: T::AccountId, 
     ) -> DispatchResult {
 
-        // --- 1. Check that the caller has signed the transaction. (the coldkey of the pairing)
-        let coldkey = ensure_signed( origin )?; 
-        log::info!("do_registration( coldkey:{:?} netuid:{:?} key:{:?} )", coldkey, netuid, key );
+        // --- 1. Check that the caller has signed the transaction. (the key of the pairing)
+        let key = ensure_signed( origin )?; 
+        log::info!("do_registration( key:{:?} netuid:{:?} )", key, netuid );
 
         // --- 2. Ensure the passed network is valid.
         ensure!( Self::if_subnet_exist( netuid ), Error::<T>::NetworkDoesNotExist ); 
@@ -106,26 +59,18 @@ impl<T: Config> Pallet<T> {
         // --- 4. Ensure that the key is not already registered.
         ensure!( !Uids::<T>::contains_key( netuid, &key ), Error::<T>::AlreadyRegistered );
 
-        // --- 5. Ensure that the key passes the registration requirement
-        ensure!( Self::passes_network_connection_requirement( netuid, &key ), Error::<T>::DidNotPassConnectedNetworkRequirement );
-    
-        // --- 6. Ensure the callers coldkey has enough stake to perform the transaction.
-        let current_block_number: u64 = Self::get_current_block_as_u64();
+        // --- 6. Ensure the callers key has enough stake to perform the transaction.
+        
         let registration_cost_as_balance = Self::u64_to_balance( Self::get_burn_as_u64( netuid ) ).unwrap();
-        ensure!( Self::can_remove_balance_from_coldkey_account( &coldkey, registration_cost_as_balance ), Error::<T>::NotEnoughBalanceToStake );
+        ensure!( Self::can_remove_balance_from_account( &key, registration_cost_as_balance ), Error::<T>::NotEnoughBalanceToStake );
 
-        // --- 7. Ensure the remove operation from the coldkey is a success.
-        ensure!( Self::remove_balance_from_coldkey_account( &coldkey, registration_cost_as_balance ) == true, Error::<T>::BalanceWithdrawalError );
+        // --- 7. Ensure the remove operation from the key is a success.
+        ensure!( Self::remove_balance_from_account( &key, registration_cost_as_balance ) == true, Error::<T>::BalanceWithdrawalError );
         
         // The burn occurs here.
         TotalIssuance::<T>::put( TotalIssuance::<T>::get().saturating_sub( Self::get_burn_as_u64( netuid ) ) );
 
-        // --- 8. If the network account does not exist we will create it here.
-        Self::create_account_if_non_existent( &coldkey, &key);         
-
-        // --- 9. Ensure that the pairing is correct.
-        ensure!( Self::coldkey_owns_key( &coldkey, &key ), Error::<T>::NonAssociatedColdKey );
-
+ 
         // --- 10. Append module or prune it.
         let subnetwork_uid: u16;
         let current_subnetwork_n: u16 = Self::get_subnetwork_n( netuid );
@@ -182,11 +127,6 @@ impl<T: Config> Pallet<T> {
     // 	* 'work' ( Vec<u8> ):
     // 		- Vector encoded bytes representing work done.
     //
-    // 	* 'key' ( T::AccountId ):
-    // 		- Hotkey to be registered to the network.
-    //
-    // 	* 'coldkey' ( T::AccountId ):
-    // 		- Associated coldkey account.
     //
     // # Event:
     // 	* ModuleRegistered;
@@ -217,10 +157,13 @@ impl<T: Config> Pallet<T> {
         netuid: u16, 
     ) -> DispatchResult {
 
+
         // --- 1. Check that the caller has signed the transaction. 
         // TODO( const ): This not be the key signature or else an exterior actor can register the key and potentially control it?
-        let signing_origin = ensure_signed( origin )?;        
-        log::info!("do_registration( origin:{:?} netuid:{:?} key:{:?}, coldkey:{:?} )", signing_origin, netuid, key, coldkey );
+        let key = ensure_signed( origin )?;        
+        log::info!("do_registration( origin:{:?} netuid:{:?} key:{:?} )", signing_origin, netuid, key );
+
+        let current_block_number: u64 = Self::get_current_block_as_u64();
 
         // --- 2. Ensure the passed network is valid.
         ensure!( Self::if_subnet_exist( netuid ), Error::<T>::NetworkDoesNotExist ); 
@@ -230,12 +173,6 @@ impl<T: Config> Pallet<T> {
 
         // --- 4. Ensure that the key is not already registered.
         ensure!( !Uids::<T>::contains_key( netuid, &key ), Error::<T>::AlreadyRegistered );
-
-        // --- 9. Ensure that the key passes the registration requirement
-        ensure!( Self::passes_network_connection_requirement( netuid, &key ), Error::<T>::DidNotPassConnectedNetworkRequirement );
-
-        // --- 10. If the network account does not exist we will create it here.
-        Self::create_account_if_non_existent( &coldkey, &key);         
 
         // --- 11. Ensure that the pairing is correct.
 
@@ -277,44 +214,6 @@ impl<T: Config> Pallet<T> {
         Ok(())
     }
 
-    // --- Checks if the key passes the topk prunning requirement in all connected networks.
-    //
-    pub fn passes_network_connection_requirement( netuid_a: u16, key: &T::AccountId ) -> bool {
-        // --- 1. We are iterating over all networks to see if there is a registration connection.
-        for (netuid_b, exists) in NetworksAdded::<T>::iter() {
-
-            // --- 2. If the network exists and the registration connection requirement exists we will
-            // check to see if we pass it.
-            if exists && Self::network_connection_requirement_exists( netuid_a, netuid_b ){
-
-                // --- 3. We cant be in the top percentile of an empty network.
-                let subnet_n: u16 = Self::get_subnetwork_n( netuid_b );
-                if subnet_n == 0 { return false; }
-
-                // --- 4. First check to see if this key is already registered on this network.
-                // If we are not registered we trivially fail the requirement.
-                if !Self::is_key_registered_on_network( netuid_b, key ) { return false; }
-                let uid_b: u16 = Self::get_uid_for_net_and_key( netuid_b, key ).unwrap();
-
-                // --- 5. Next, count how many keys on the connected network have a better prunning score than
-                // our target network.
-                let mut n_better_prunning_scores: u16 = 0;
-                let our_prunning_score_b: u16 = Self::get_pruning_score_for_uid( netuid_b, uid_b );
-                for other_uid in 0..subnet_n {
-                    let other_runing_score_b: u16 = Self::get_pruning_score_for_uid( netuid_b, other_uid );
-                    if other_uid != uid_b && other_runing_score_b > our_prunning_score_b { n_better_prunning_scores = n_better_prunning_scores + 1; }
-                }
-
-                // --- 6. Using the n_better count we check to see if the target key is in the topk percentile.
-                // The percentile is stored in NetworkConnect( netuid_i, netuid_b ) as a u16 normalized value (0, 1), 1 being top 100%.
-                let topk_percentile_requirement: I32F32 = I32F32::from_num( Self::get_network_connection_requirement( netuid_a, netuid_b ) ) / I32F32::from_num( u16::MAX );
-                let topk_percentile_value: I32F32 = I32F32::from_num( n_better_prunning_scores ) / I32F32::from_num( Self::get_subnetwork_n( netuid_b ) );
-                if topk_percentile_value > topk_percentile_requirement { return false }
-            }
-        }
-        // --- 7. If we pass all the active registration requirments we return true allowing the registration to 
-        return true;
-    }
 
     pub fn vec_to_hash( vec_hash: Vec<u8> ) -> H256 {
         let de_ref_hash = &vec_hash; // b: &Vec<u8>
@@ -438,15 +337,4 @@ impl<T: Config> Pallet<T> {
         return seal_hash;
     }
 
-    // Helper function for creating nonce and work.
-    pub fn create_work_for_block_number( netuid:u16, block_number: u64, start_nonce: u64 ) -> (u64, Vec<u8>) {
-        let mut nonce: u64 = start_nonce;
-        let mut work: H256 = Self::create_seal_hash( block_number, nonce );
-        while !Self::hash_meets_difficulty(&work, difficulty) {
-            nonce = nonce + 1;
-            work = Self::create_seal_hash( block_number, nonce );
-        }
-        let vec_work: Vec<u8> = Self::hash_to_vec( work );
-        return (nonce, vec_work)
-    }
 }

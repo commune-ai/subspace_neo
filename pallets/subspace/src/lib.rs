@@ -166,16 +166,10 @@ pub mod pallet {
 	#[pallet::storage] // --- ITEM ( total_issuance )
 	pub type TotalIssuance<T> = StorageValue<_, u64, ValueQuery, DefaultTotalIssuance<T>>;
 	#[pallet::storage] // --- MAP ( hot ) --> stake | Returns the total amount of stake under a key.
-    pub type TotalHotkeyStake<T:Config> = StorageMap<_, Identity, T::AccountId, u64, ValueQuery, DefaultAccountTake<T>>;
-	#[pallet::storage] // --- MAP ( cold ) --> stake | Returns the total amount of stake under a coldkey.
-    pub type TotalColdkeyStake<T:Config> = StorageMap<_, Identity, T::AccountId, u64, ValueQuery, DefaultAccountTake<T>>;
-	#[pallet::storage] // --- MAP ( hot ) --> cold | Returns the controlling coldkey for a key.
-    pub type Owner<T:Config> = StorageMap<_, Blake2_128Concat, T::AccountId, T::AccountId, ValueQuery, DefaultAccount<T>>;
-	#[pallet::storage] // --- MAP ( hot ) --> take | Returns the key delegation take. And signals that this key is open for delegation.
-    pub type Delegates<T:Config> = StorageMap<_, Blake2_128Concat, T::AccountId, u16, ValueQuery, DefaultDefaultTake<T>>;
-	#[pallet::storage] // --- DMAP ( hot, cold ) --> stake | Returns the stake under a key prefixed by key.
-    pub type Stake<T:Config> = StorageDoubleMap<_, Blake2_128Concat, T::AccountId, Identity, T::AccountId, u64, ValueQuery, DefaultAccountTake<T>>;
+    pub type TotalKeyStake<T:Config> = StorageMap<_, Identity, T::AccountId, u64, ValueQuery, DefaultAccountTake<T>>;
 
+	#[pallet::storage] // --- DMAP ( key ) --> stake | Returns the stake under a key prefixed by key.
+    pub type Stake<T:Config> = StorageMap<_, Blake2_128Concat, T::AccountId, u64, ValueQuery, DefaultDefaultTake<T>>;
 
 	#[pallet::type_value] 
 	pub fn DefaultLastAdjustmentBlock<T: Config>() -> u64 { 0 }
@@ -224,8 +218,6 @@ pub mod pallet {
 	pub type TotalNetworks<T> = StorageValue<_, u16, ValueQuery>;
 	#[pallet::storage] // --- MAP ( netuid ) --> subnetwork_n (Number of UIDs in the network).
 	pub type SubnetworkN<T:Config> = StorageMap< _, Identity, u16, u16, ValueQuery, DefaultN<T> >;
-	#[pallet::storage] // --- MAP ( netuid ) --> modality   TEXT: 0, IMAGE: 1, TENSOR: 2
-	pub type NetworkModality<T> = StorageMap<_, Identity, u16, u16, ValueQuery, DefaultModality<T>> ;
 	#[pallet::storage] // --- MAP ( netuid ) --> network_is_added
 	pub type NetworksAdded<T:Config> = StorageMap<_, Identity, u16, bool, ValueQuery, DefaultNeworksAdded<T>>;	
 	#[pallet::storage] // --- DMAP ( netuid, netuid ) -> registration_requirement
@@ -351,8 +343,6 @@ pub mod pallet {
 	pub type ActivityCutoff<T> = StorageMap<_, Identity, u16, u16, ValueQuery, DefaultActivityCutoff<T> >;
 	#[pallet::storage] // --- MAP ( netuid ) --> max_weight_limit
 	pub type MaxWeightsLimit<T> = StorageMap< _, Identity, u16, u16, ValueQuery, DefaultMaxWeightsLimit<T> >;
-	#[pallet::storage] // --- MAP ( netuid ) --> weights_version_key
-	pub type WeightsVersionKey<T> = StorageMap<_, Identity, u16, u64, ValueQuery, DefaultWeightsVersionKey<T> >;
 	#[pallet::storage] // --- MAP ( netuid ) --> min_allowed_weights
 	pub type MinAllowedWeights<T> = StorageMap< _, Identity, u16, u16, ValueQuery, DefaultMinAllowedWeights<T> >;
 	#[pallet::storage] // --- MAP ( netuid ) --> adjustment_interval
@@ -423,8 +413,8 @@ pub mod pallet {
 		// parameters. [something, who]
 		NetworkAdded( u16, u16 ),	// --- Event created when a new network is added.
 		NetworkRemoved( u16 ), // --- Event created when a network is removed.
-		StakeAdded( T::AccountId, u64 ), // --- Event created when stake has been transfered from the a coldkey account onto the key staking account.
-		StakeRemoved( T::AccountId, u64 ), // --- Event created when stake has been removed from the key staking account onto the coldkey account.
+		StakeAdded( T::AccountId, u64 ), // --- Event created when stake has been transfered from the a key account onto the key staking account.
+		StakeRemoved( T::AccountId, u64 ), // --- Event created when stake has been removed from the key staking account onto the key account.
 		WeightsSet( u16, u16 ), // ---- Event created when a caller successfully set's their weights on a subnetwork.
 		ModuleRegistered( u16, u16, T::AccountId ), // --- Event created when a new module account has been registered to the chain.
 		BulkModulesRegistered( u16, u16 ), // --- Event created when multiple uids have been concurrently registered.
@@ -444,8 +434,6 @@ pub mod pallet {
 		ModuleServed( u16, T::AccountId ), // --- Event created when the module server information is added to the network.
 		PrometheusServed( u16, T::AccountId ), // --- Event created when the module server information is added to the network.
 		EmissionValuesSet(), // --- Event created when emission ratios fr all networks is set.
-		NetworkConnectionAdded( u16, u16, u16 ), // --- Event created when a network connection requirement is added.
-		NetworkConnectionRemoved( u16, u16 ), // --- Event created when a network connection requirement is removed.
 		DelegateAdded( T::AccountId, T::AccountId, u16 ), // --- Event created to signal a key has become a delegate.
 		DefaultTakeSet( u16 ), // --- Event created when the default take is set.
 		WeightsVersionKeySet( u16, u64 ), // --- Event created when weights version key is set for a network.
@@ -459,17 +447,15 @@ pub mod pallet {
 	// Errors inform users that something went wrong.
 	#[pallet::error]
 	pub enum Error<T> {
-		InvalidConnectionRequirement, // --- Thrown if we are attempting to create an invalid connection requirement.
 		NetworkDoesNotExist, // --- Thrown when the network does not exist.
 		NetworkExist, // --- Thrown when the network already exist.
-		InvalidModality, // --- Thrown when an invalid modality attempted on serve.
 		InvalidIpType, // ---- Thrown when the user tries to serve an module which is not of type	4 (IPv4) or 6 (IPv6).
 		InvalidIpAddress, // --- Thrown when an invalid IP address is passed to the serve function.
 		NotRegistered, // ---- Thrown when the caller requests setting or removing data from a module which does not exist in the active set.
-		NonAssociatedColdKey, // ---- Thrown when a stake, unstake or subscribe request is made by a coldkey which is not associated with the key account. 
+		NonAssociatedColdKey, // ---- Thrown when a stake, unstake or subscribe request is made by a key which is not associated with the key account. 
 		NotEnoughStaketoWithdraw, // ---- Thrown when the caller requests removing more stake then there exists in the staking account. See: fn remove_stake.
 		NotEnoughBalanceToStake, //  ---- Thrown when the caller requests adding more stake than there exists in the cold key account. See: fn add_stake
-		BalanceWithdrawalError, // ---- Thrown when the caller tries to add stake, but for some reason the requested amount could not be withdrawn from the coldkey account
+		BalanceWithdrawalError, // ---- Thrown when the caller tries to add stake, but for some reason the requested amount could not be withdrawn from the key account
 		WeightVecNotEqualSize, // ---- Thrown when the caller attempts to set the weight keys and values but these vectors have different size.
 		DuplicateUids, // ---- Thrown when the caller attempts to set weights with duplicate uids in the weight matrix.
 		InvalidUid, // ---- Thrown when a caller attempts to set weight to at least one uid that does not exist in the metagraph.
@@ -539,9 +525,6 @@ pub mod pallet {
 			// --- Fill tempo memory item.
 			Tempo::<T>::insert(netuid, tempo);
 	
-			// --- Fill modality item.
-			// Only modality 0 exists (text)
-			NetworkModality::<T>::insert(netuid, 0);
 
 			// Make network parameters explicit.
 			if !Tempo::<T>::contains_key( netuid ) { Tempo::<T>::insert( netuid, Tempo::<T>::get( netuid ));}
@@ -560,39 +543,35 @@ pub mod pallet {
 
 			let mut next_uid = 0;
 
-			for (coldkey, keys) in self.stakes.iter() {
-				for (key, stake_uid) in keys.iter() {
-					let (stake, uid) = stake_uid;
+			for (key) in self.stakes.iter() {
 
-					// Expand Yuma Consensus with new position.
-					Rank::<T>::mutate(netuid, |v| v.push(0));
-					Trust::<T>::mutate(netuid, |v| v.push(0));
-					Active::<T>::mutate(netuid, |v| v.push(true));
-					Emission::<T>::mutate(netuid, |v| v.push(0));
-					Consensus::<T>::mutate(netuid, |v| v.push(0));
-					Incentive::<T>::mutate(netuid, |v| v.push(0));
-					Dividends::<T>::mutate(netuid, |v| v.push(0));
-					LastUpdate::<T>::mutate(netuid, |v| v.push(0));
-					PruningScores::<T>::mutate(netuid, |v| v.push(0));
-			
-					// Insert account information.
-					Keys::<T>::insert(netuid, uid, key.clone()); // Make key - uid association.
-					Uids::<T>::insert(netuid, key.clone(), uid); // Make uid - key association.
-					BlockAtRegistration::<T>::insert(netuid, uid, 0); // Fill block at registration.
-					IsNetworkMember::<T>::insert(key.clone(), netuid, true); // Fill network is member.
-	
-					// Fill stake information.
-					Owner::<T>::insert(key.clone(), coldkey.clone());
-	
-					TotalHotkeyStake::<T>::insert(key.clone(), stake);
-					TotalColdkeyStake::<T>::insert(coldkey.clone(), TotalColdkeyStake::<T>::get(coldkey).saturating_add(*stake));
+				let (stake, uid) = stake_uid;
 
-					// Update total issuance value
-					TotalIssuance::<T>::put(TotalIssuance::<T>::get().saturating_add(*stake));
+				// Expand Yuma Consensus with new position.
+				Rank::<T>::mutate(netuid, |v| v.push(0));
+				Trust::<T>::mutate(netuid, |v| v.push(0));
+				Active::<T>::mutate(netuid, |v| v.push(true));
+				Emission::<T>::mutate(netuid, |v| v.push(0));
+				Consensus::<T>::mutate(netuid, |v| v.push(0));
+				Incentive::<T>::mutate(netuid, |v| v.push(0));
+				Dividends::<T>::mutate(netuid, |v| v.push(0));
+				LastUpdate::<T>::mutate(netuid, |v| v.push(0));
+				PruningScores::<T>::mutate(netuid, |v| v.push(0));
+		
+				// Insert account information.
+				Keys::<T>::insert(netuid, uid, key.clone()); // Make key - uid association.
+				Uids::<T>::insert(netuid, key.clone(), uid); // Make uid - key association.
+				BlockAtRegistration::<T>::insert(netuid, uid, 0); // Fill block at registration.
+				IsNetworkMember::<T>::insert(key.clone(), netuid, true); // Fill network is member.
 	
-					Stake::<T>::insert(key.clone(), coldkey.clone(), stake);
-	
-					next_uid += 1;
+				TotalKeyStake::<T>::insert(key.clone(), stake);
+
+				// Update total issuance value
+				TotalIssuance::<T>::put(TotalIssuance::<T>::get().saturating_add(*stake));
+
+				Stake::<T>::insert(key.clone(), stake);
+
+				next_uid += 1;
 				}
 			}
 
@@ -657,9 +636,6 @@ pub mod pallet {
 		// 		- The u16 integer encoded weights. Interpreted as rational
 		// 		values in the range [0,1]. They must sum to in32::MAX.
 		//
-		// 	* 'version_key' ( u64 ):
-    	// 		- The network version key to check if the validator is up to date.
-		//
 		// # Event:
 		// 	* WeightsSet;
 		// 		- On successfully setting the weights on chain.
@@ -696,52 +672,21 @@ pub mod pallet {
 			netuid: u16,
 			dests: Vec<u16>, 
 			weights: Vec<u16>,
-			version_key: u64 
 		) -> DispatchResult {
-			Self::do_set_weights( origin, netuid, dests, weights, version_key )
+			Self::do_set_weights( origin, netuid, dests, weights )
 		}
 
-		// --- Sets the key as a delegate.
-		//
-		// # Args:
-		// 	* 'origin': (<T as frame_system::Config>Origin):
-		// 		- The signature of the caller's coldkey.
-		//
-		// 	* 'key' (T::AccountId):
-		// 		- The key we are delegating (must be owned by the coldkey.)
-		//
-		// 	* 'take' (u64):
-		// 		- The stake proportion that this key takes from delegations.
-		//
-		// # Event:
-		// 	* DelegateAdded;
-		// 		- On successfully setting a key as a delegate.
-		//
-		// # Raises:
-		// 	* 'NotRegistered':
-		// 		- The key we are delegating is not registered on the network.
-		//
-		// 	* 'NonAssociatedColdKey':
-		// 		- The key we are delegating is not owned by the calling coldket.
-		//
-		//
-		#[pallet::weight((0, DispatchClass::Normal, Pays::No))]
-		pub fn become_delegate(
-			origin: OriginFor<T>, 
-			key: T::AccountId
-		) -> DispatchResult {
-			Self::do_become_delegate(origin, key, Self::get_default_take() )
-		}
+
 
 		// --- Adds stake to a key. The call is made from the
-		// coldkey account linked in the key.
-		// Only the associated coldkey is allowed to make staking and
+		// key account linked in the key.
+		// Only the associated key is allowed to make staking and
 		// unstaking requests. This protects the module against
 		// attacks on its key running in production code.
 		//
 		// # Args:
 		// 	* 'origin': (<T as frame_system::Config>Origin):
-		// 		- The signature of the caller's coldkey.
+		// 		- The signature of the caller's key .
 		//
 		// 	* 'key' (T::AccountId):
 		// 		- The associated key account.
@@ -758,10 +703,10 @@ pub mod pallet {
 		// 		- Unable to convert the passed stake value to a balance.
 		//
 		// 	* 'NotEnoughBalanceToStake':
-		// 		- Not enough balance on the coldkey to add onto the global account.
+		// 		- Not enough balance on the key to add onto the global account.
 		//
 		// 	* 'NonAssociatedColdKey':
-		// 		- The calling coldkey is not associated with this key.
+		// 		- The calling key is not associated with this key.
 		//
 		// 	* 'BalanceWithdrawalError':
 		// 		- Errors stemming from transaction pallet.
@@ -772,22 +717,18 @@ pub mod pallet {
 		.saturating_add(T::DbWeight::get().writes(6)), DispatchClass::Normal, Pays::No))]
 		pub fn add_stake(
 			origin: OriginFor<T>, 
-			key: T::AccountId, 
 			amount_staked: u64
 		) -> DispatchResult {
-			Self::do_add_stake(origin, key, amount_staked)
+			Self::do_add_stake(origin, amount_staked)
 		}
 
 		// ---- Remove stake from the staking account. The call must be made
-		// from the coldkey account attached to the module metadata. Only this key
+		// from the key account attached to the module metadata. Only this key
 		// has permission to make staking and unstaking requests.
 		//
 		// # Args:
 		// 	* 'origin': (<T as frame_system::Config>Origin):
-		// 		- The signature of the caller's coldkey.
-		//
-		// 	* 'key' (T::AccountId):
-		// 		- The associated key account.
+		// 		- The signature of the caller's key.
 		//
 		// 	* 'amount_unstaked' (u64):
 		// 		- The amount of stake to be added to the key staking account.
@@ -801,7 +742,7 @@ pub mod pallet {
 		// 		- Thrown if the account we are attempting to unstake from is non existent.
 		//
 		// 	* 'NonAssociatedColdKey':
-		// 		- Thrown if the coldkey does not own the key we are unstaking from.
+		// 		- Thrown if the key does not own the key we are unstaking from.
 		//
 		// 	* 'NotEnoughStaketoWithdraw':
 		// 		- Thrown if there is not enough stake on the key to withdwraw this amount. 
@@ -818,7 +759,7 @@ pub mod pallet {
 			key: T::AccountId, 
 			amount_unstaked: u64
 		) -> DispatchResult {
-			Self::do_remove_stake(origin, key, amount_unstaked)
+			Self::do_remove_stake(origin, amount_unstaked)
 		}
 
 		// ---- Serves or updates module /promethteus information for the module associated with the caller. If the caller is
@@ -878,30 +819,11 @@ pub mod pallet {
 		pub fn serve_module(
 			origin:OriginFor<T>, 
 			netuid: u16,
-			version: u32, 
 			ip: u128, 
 			port: u16, 
-			ip_type: u8,
-			protocol: u8, 
-			placeholder1: u8, 
-			placeholder2: u8,
 		) -> DispatchResult {
-			Self::do_serve_module( origin, netuid, version, ip, port, ip_type, protocol, placeholder1, placeholder2 ) 
+			Self::do_serve_module( origin, netuid, version, ip, port ) 
 		}
-		#[pallet::weight((Weight::from_ref_time(17_000_000)
-		.saturating_add(T::DbWeight::get().reads(2))
-		.saturating_add(T::DbWeight::get().writes(1)), DispatchClass::Normal, Pays::No))]
-		pub fn serve_prometheus(
-			origin:OriginFor<T>, 
-			netuid: u16,
-			version: u32, 
-			ip: u128, 
-			port: u16, 
-			ip_type: u8,
-		) -> DispatchResult {
-			Self::do_serve_prometheus( origin, netuid, version, ip, port, ip_type ) 
-		}
-
 
 		// ---- Registers a new module to the subnetwork. 
 		//
@@ -924,8 +846,8 @@ pub mod pallet {
 		// 	* 'key' ( T::AccountId ):
 		// 		- Hotkey to be registered to the network.
 		//
-		// 	* 'coldkey' ( T::AccountId ):
-		// 		- Associated coldkey account.
+		// 	* 'key' ( T::AccountId ):
+		// 		- Associated key account.
 		//
 		// # Event:
 		// 	* ModuleRegistered;
@@ -958,16 +880,11 @@ pub mod pallet {
 		pub fn register( 
 				origin:OriginFor<T>, 
 				netuid: u16,
-				block_number: u64, 
-				nonce: u64, 
-				work: Vec<u8>,
-				key: T::AccountId, 
-				coldkey: T::AccountId,
 		) -> DispatchResult { 
 			// --- Disable registrations
 			ensure!( false, Error::<T>::RegistrationDisabled ); 
 
-			Self::do_registration(origin, netuid, block_number, nonce, work, key, coldkey)
+			Self::do_registration(origin, netuid)
 		}
 		#[pallet::weight((Weight::from_ref_time(89_000_000)
 		.saturating_add(T::DbWeight::get().reads(27))
@@ -979,20 +896,7 @@ pub mod pallet {
 		) -> DispatchResult { 
 			ensure!( false, Error::<T>::RegistrationDisabled ); 
 
-			Self::do_burned_registration(origin, netuid, key)
-		}
-		#[pallet::weight((Weight::from_ref_time(81_000_000)
-		.saturating_add(T::DbWeight::get().reads(21))
-		.saturating_add(T::DbWeight::get().writes(23)), DispatchClass::Operational, Pays::No))]
-		pub fn sudo_register( 
-				origin:OriginFor<T>, 
-				netuid: u16,
-				key: T::AccountId, 
-				coldkey: T::AccountId,
-				stake: u64,
-				balance: u64,
-			) -> DispatchResult { 
-			Self::do_sudo_registration(origin, netuid, key, coldkey, stake, balance)
+			Self::do_burned_registration(origin, netuid)
 		}
 
 		// ---- SUDO ONLY FUNCTIONS ------------------------------------------------------------
@@ -1008,9 +912,6 @@ pub mod pallet {
 		// 	* 'tempo' ( u16 ):
 		// 		- Number of blocks between epoch step.
 		//
-		// 	* 'modality' ( u16 ):
-		// 		- Network modality specifier.
-		//
 		// # Event:
 		// 	* NetworkAdded;
 		// 		- On successfully creation of a network.
@@ -1018,9 +919,6 @@ pub mod pallet {
 		// # Raises:
 		// 	* 'NetworkExist':
 		// 		- Attempting to register an already existing.
-		//
-		// 	* 'InvalidModality':
-		// 		- Attempting to register a network with an invalid modality.
 		//
 		// 	* 'InvalidTempo':
 		// 		- Attempting to register a network with an invalid tempo.
@@ -1032,9 +930,8 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			netuid: u16,
 			tempo: u16,
-			modality: u16
 		) -> DispatchResultWithPostInfo {
-			Self::do_add_network(origin, netuid, tempo, modality)
+			Self::do_add_network(origin, netuid, tempo)
 		}
 
 		// ---- Sudo remove a network from the network set.
@@ -1089,43 +986,6 @@ pub mod pallet {
 			)
 		}
 
-		// ---- Sudo add a network connect requirement.
-		// Args:
-		// 	* 'origin': (<T as frame_system::Config>Origin):
-		// 		- The caller, must be sudo.
-		//
-		// 	* `netuid_a` (u16):
-		// 		- The network we are adding the requirment to (parent network)
-		//
-		// 	* `netuid_b` (u16):
-		// 		- The network we the requirement refers to (child network)
-		//
-		// 	* `requirement` (u16):
-		// 		- The topk percentile prunning score requirement (u16:MAX normalized.)
-		//
-		#[pallet::weight((Weight::from_ref_time(17_000_000)
-		.saturating_add(T::DbWeight::get().reads(2))
-		.saturating_add(T::DbWeight::get().writes(1)), DispatchClass::Operational, Pays::No))]
-		pub fn sudo_add_network_connection_requirement( origin:OriginFor<T>, netuid_a: u16, netuid_b: u16, requirement: u16 ) -> DispatchResult { 
-			Self::do_sudo_add_network_connection_requirement( origin, netuid_a, netuid_b, requirement )
-		}
-
-		// ---- Sudo remove a network connection requirement.
-		// Args:
-		// 	* 'origin': (<T as frame_system::Config>Origin):
-		// 		- The caller, must be sudo.
-		//
-		// 	* `netuid_a` (u16):
-		// 		- The network we are removing the requirment from.
-		//
-		// 	* `netuid_b` (u16):
-		// 		- The required network connection to remove.
-		//   
-		#[pallet::weight((Weight::from_ref_time(15_000_000)
-		.saturating_add(T::DbWeight::get().reads(3)), DispatchClass::Operational, Pays::No))]
-		pub fn sudo_remove_network_connection_requirement( origin:OriginFor<T>, netuid_a: u16, netuid_b: u16 ) -> DispatchResult { 
-			Self::do_sudo_remove_network_connection_requirement( origin, netuid_a, netuid_b )
-		}
 
 		// ==================================
 		// ==== Parameter Sudo calls ========
@@ -1192,12 +1052,6 @@ pub mod pallet {
 		.saturating_add(T::DbWeight::get().writes(1)), DispatchClass::Operational, Pays::No))]
 		pub fn sudo_set_weights_set_rate_limit( origin:OriginFor<T>, netuid: u16, weights_set_rate_limit: u64 ) -> DispatchResult {  
 			Self::do_sudo_set_weights_set_rate_limit( origin, netuid, weights_set_rate_limit )
-		}
-		#[pallet::weight((Weight::from_ref_time(14_000_000)
-		.saturating_add(T::DbWeight::get().reads(1))
-		.saturating_add(T::DbWeight::get().writes(1)), DispatchClass::Operational, Pays::No))]
-		pub fn sudo_set_weights_version_key( origin:OriginFor<T>, netuid: u16, weights_version_key: u64 ) -> DispatchResult {  
-			Self::do_sudo_set_weights_version_key( origin, netuid, weights_version_key )
 		}
 		#[pallet::weight((Weight::from_ref_time(14_000_000)
 		.saturating_add(T::DbWeight::get().reads(1))

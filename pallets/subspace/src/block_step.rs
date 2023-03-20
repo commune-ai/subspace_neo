@@ -64,7 +64,7 @@ impl<T: Config> Pallet<T> {
             if !Self::has_loaded_emission_tuples( netuid ) { continue } // There are no tuples to emit.
             let tuples_to_drain: Vec<(T::AccountId, u64)> = Self::get_loaded_emission_tuples( netuid );
             for (key, amount) in tuples_to_drain.iter() {                 
-                Self::emit_inflation_through_key_account( &key, *amount );
+                Self::emit_inflation_through_account( &key, *amount );
             }            
             LoadedEmission::<T>::remove( netuid );
         }
@@ -120,43 +120,22 @@ impl<T: Config> Pallet<T> {
     // is distributed onto the accounts in proportion of the stake delegated minus the take. This function
     // is called after an epoch to distribute the newly minted stake according to delegation.
     //
-    pub fn emit_inflation_through_key_account( key: &T::AccountId, emission: u64) {
-        
-        // --- 1. Check if the key is a delegate. If not, we simply pass the stake through to the 
-        // coldkye - key account as normal.
-        if !Self::key_is_delegate( key ) { 
-            Self::increase_stake_on_key_account( &key, emission ); 
-            return; 
-        }
-
-        // --- 2. The key is a delegate. We first distribute a proportion of the emission to the key
-        // directly as a function of its 'take'
-        let total_key_stake: u64 = Self::get_total_stake_for_key( key );
-        let delegate_take: u64 = Self::calculate_delegate_proportional_take( key, emission );
-        let remaining_emission: u64 = emission - delegate_take;
-
-        // 3. -- The remaining emission goes to the owners in proportion to the stake delegated.
-        for ( owning_coldkey_i, stake_i ) in < Stake<T> as IterableStorageDoubleMap<T::AccountId, T::AccountId, u64 >>::iter_prefix( key ) {
-            
+    pub fn emit_inflation_through_account( key: &T::AccountId, emission: u64) {
+        // --- 1.We simply increase the key's stake.
+        Self::increase_stake_on_account( &key, emission ); 
             // --- 4. The emission proportion is remaining_emission * ( stake / total_stake ).
-            let stake_proportion: u64 = Self::calculate_stake_proportional_emission( stake_i, total_key_stake, remaining_emission );
-            Self::increase_stake_on_coldkey_key_account( &owning_coldkey_i, &key, stake_proportion );
-            log::debug!("owning_coldkey_i: {:?} key: {:?} emission: +{:?} ", owning_coldkey_i, key, stake_proportion );
+        log::debug!(" key: {:?} emission: +{:?} ", key, stake_proportion );
 
         }
 
         // --- 5. Last increase final account balance of delegate after 4, since 5 will change the stake proportion of 
         // the delegate and effect calculation in 4.
-        Self::increase_stake_on_key_account( &key, delegate_take );
-        log::debug!("delkey: {:?} delegate_take: +{:?} ", key,delegate_take );
     }
 
     // Increases the stake on the cold - hot pairing by increment while also incrementing other counters.
     // This function should be called rather than set_stake under account.
     // 
-    pub fn block_step_increase_stake_on_coldkey_key_account( coldkey: &T::AccountId, key: &T::AccountId, increment: u64 ){
-        TotalColdkeyStake::<T>::mutate( coldkey, | old | old.saturating_add( increment ) );
-        TotalHotkeyStake::<T>::insert( key, TotalHotkeyStake::<T>::get(key).saturating_add( increment ) );
+    pub fn block_step_increase_stake_on_account( key: &T::AccountId, increment: u64 ){
         Stake::<T>::insert( key, coldkey, Stake::<T>::get( key, coldkey).saturating_add( increment ) );
         TotalStake::<T>::put( TotalStake::<T>::get().saturating_add( increment ) );
         TotalIssuance::<T>::put( TotalIssuance::<T>::get().saturating_add( increment ) );
@@ -165,10 +144,8 @@ impl<T: Config> Pallet<T> {
 
     // Decreases the stake on the cold - hot pairing by the decrement while decreasing other counters.
     //
-    pub fn block_step_decrease_stake_on_coldkey_key_account( coldkey: &T::AccountId, key: &T::AccountId, decrement: u64 ){
-        TotalColdkeyStake::<T>::mutate( coldkey, | old | old.saturating_sub( decrement ) );
-        TotalHotkeyStake::<T>::insert( key, TotalHotkeyStake::<T>::get(key).saturating_sub( decrement ) );
-        Stake::<T>::insert( key, coldkey, Stake::<T>::get( key, coldkey).saturating_sub( decrement ) );
+    pub fn block_step_decrease_stake_on_account(  key: &T::AccountId, decrement: u64 ){
+        Stake::<T>::insert( key, Stake::<T>::get( key).saturating_sub( decrement ) );
         TotalStake::<T>::put( TotalStake::<T>::get().saturating_sub( decrement ) );
         TotalIssuance::<T>::put( TotalIssuance::<T>::get().saturating_sub( decrement ) );
     }
@@ -182,17 +159,6 @@ impl<T: Config> Pallet<T> {
         return proportional_emission.to_num::<u64>();
     }
 
-    // Returns the delegated stake 'take' assigend to this key. (If exists, otherwise 0)
-    //
-    pub fn calculate_delegate_proportional_take( key: &T::AccountId, emission: u64 ) -> u64 {
-        if Self::key_is_delegate( key ) {
-            let take_proportion: I64F64 = I64F64::from_num( Delegates::<T>::get( key ) ) / I64F64::from_num( u16::MAX );
-            let take_emission: I64F64 = take_proportion * I64F64::from_num( emission );
-            return take_emission.to_num::<u64>();
-        } else {
-            return 0;
-        }
-    }
 
     // Adjusts the network difficulties/burns of every active network. Reseting state parameters.
     //
