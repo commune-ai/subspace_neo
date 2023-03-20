@@ -121,24 +121,6 @@ pub mod pallet {
 		type InitialTargetRegistrationsPerInterval: Get<u16>;
 		#[pallet::constant] // Max UID constant.
 		type InitialMaxAllowedUids: Get<u16>;
-		#[pallet::constant] // Default Batch size.
-		type InitialValidatorBatchSize: Get<u16>;
-		#[pallet::constant] // Default Batch size.
-		type InitialValidatorSequenceLen: Get<u16>;
-		#[pallet::constant] // Default Epoch length.
-		type InitialValidatorEpochLen: Get<u16>;
-		#[pallet::constant] // Default Reset length.
-		type InitialValidatorEpochsPerReset: Get<u16>;
-		#[pallet::constant] // Initial validator exclude quantile.
-		type InitialValidatorExcludeQuantile: Get<u16>;
-		#[pallet::constant] // Initial validator logits divergence penalty/threshold.
-		type InitialValidatorLogitsDivergence: Get<u16>;
-		#[pallet::constant] // Initial validator context pruning length.
-		type InitialValidatorPruneLen: Get<u64>; 
-		#[pallet::constant] // Initial scaling law power.
-		type InitialScalingLawPower: Get<u16>;
-		#[pallet::constant] // Initial synergy scaling law power.
-		type InitialSynergyScalingLawPower: Get<u16>;
 		#[pallet::constant] // Immunity Period Constant.
 		type InitialImmunityPeriod: Get<u16>;
 		#[pallet::constant] // Activity constant
@@ -147,8 +129,6 @@ pub mod pallet {
 		type InitialMaxRegistrationsPerBlock: Get<u16>;
 		#[pallet::constant] // Initial pruning score for each module
 		type InitialPruningScore: Get<u16>;	
-		#[pallet::constant] // Initial allowed validators per network.
-		type InitialMaxAllowedValidators: Get<u16>;
 		#[pallet::constant] // Initial default delegation take.
 		type InitialDefaultTake: Get<u16>;
 		#[pallet::constant] // Initial weights version key.
@@ -185,15 +165,15 @@ pub mod pallet {
 	pub type BlockEmission<T> = StorageValue<_, u64, ValueQuery, DefaultBlockEmission<T>>;
 	#[pallet::storage] // --- ITEM ( total_issuance )
 	pub type TotalIssuance<T> = StorageValue<_, u64, ValueQuery, DefaultTotalIssuance<T>>;
-	#[pallet::storage] // --- MAP ( hot ) --> stake | Returns the total amount of stake under a hotkey.
+	#[pallet::storage] // --- MAP ( hot ) --> stake | Returns the total amount of stake under a key.
     pub type TotalHotkeyStake<T:Config> = StorageMap<_, Identity, T::AccountId, u64, ValueQuery, DefaultAccountTake<T>>;
 	#[pallet::storage] // --- MAP ( cold ) --> stake | Returns the total amount of stake under a coldkey.
     pub type TotalColdkeyStake<T:Config> = StorageMap<_, Identity, T::AccountId, u64, ValueQuery, DefaultAccountTake<T>>;
-	#[pallet::storage] // --- MAP ( hot ) --> cold | Returns the controlling coldkey for a hotkey.
+	#[pallet::storage] // --- MAP ( hot ) --> cold | Returns the controlling coldkey for a key.
     pub type Owner<T:Config> = StorageMap<_, Blake2_128Concat, T::AccountId, T::AccountId, ValueQuery, DefaultAccount<T>>;
-	#[pallet::storage] // --- MAP ( hot ) --> take | Returns the hotkey delegation take. And signals that this key is open for delegation.
+	#[pallet::storage] // --- MAP ( hot ) --> take | Returns the key delegation take. And signals that this key is open for delegation.
     pub type Delegates<T:Config> = StorageMap<_, Blake2_128Concat, T::AccountId, u16, ValueQuery, DefaultDefaultTake<T>>;
-	#[pallet::storage] // --- DMAP ( hot, cold ) --> stake | Returns the stake under a hotkey prefixed by hotkey.
+	#[pallet::storage] // --- DMAP ( hot, cold ) --> stake | Returns the stake under a key prefixed by key.
     pub type Stake<T:Config> = StorageDoubleMap<_, Blake2_128Concat, T::AccountId, Identity, T::AccountId, u64, ValueQuery, DefaultAccountTake<T>>;
 
 
@@ -250,7 +230,7 @@ pub mod pallet {
 	pub type NetworksAdded<T:Config> = StorageMap<_, Identity, u16, bool, ValueQuery, DefaultNeworksAdded<T>>;	
 	#[pallet::storage] // --- DMAP ( netuid, netuid ) -> registration_requirement
 	pub type NetworkConnect<T:Config> = StorageDoubleMap<_, Identity, u16, Identity, u16, u16, OptionQuery>;
-	#[pallet::storage] // --- DMAP ( hotkey, netuid ) --> bool
+	#[pallet::storage] // --- DMAP ( key, netuid ) --> bool
 	pub type IsNetworkMember<T:Config> = StorageDoubleMap<_, Blake2_128Concat, T::AccountId, Identity, u16, bool, ValueQuery, DefaultIsNetworkMember<T>>;
 
 	// ==============================
@@ -279,22 +259,22 @@ pub mod pallet {
 	pub type LastMechansimStepBlock<T> = StorageMap<_, Identity, u16, u64, ValueQuery, DefaultLastMechansimStepBlock<T> >;
 
 	// =================================
-	// ==== Axon / Promo Endpoints =====
+	// ==== Module / Promo Endpoints =====
 	// =================================
 	
-	// --- Struct for Axon.
-	pub type AxonInfoOf = AxonInfo;
+	// --- Struct for Module.
+	pub type ModuleInfoOf = ModuleInfo;
 	
 	#[derive(Encode, Decode, Default, TypeInfo, Clone, PartialEq, Eq, Debug)]
-    pub struct AxonInfo {
-		pub block: u64, // --- Axon serving block.
-        pub version: u32, // --- Axon version
-        pub ip: u128, // --- Axon u128 encoded ip address of type v6 or v4.
-        pub port: u16, // --- Axon u16 encoded port.
-        pub ip_type: u8, // --- Axon ip type, 4 for ipv4 and 6 for ipv6.
-		pub protocol: u8, // --- Axon protocol. TCP, UDP, other.
-		pub placeholder1: u8, // --- Axon proto placeholder 1.
-		pub placeholder2: u8, // --- Axon proto placeholder 1.
+    pub struct ModuleInfo {
+		pub block: u64, // --- Module serving block.
+        pub version: u32, // --- Module version
+        pub ip: u128, // --- Module u128 encoded ip address of type v6 or v4.
+        pub port: u16, // --- Module u16 encoded port.
+        pub ip_type: u8, // --- Module ip type, 4 for ipv4 and 6 for ipv6.
+		pub protocol: u8, // --- Module protocol. TCP, UDP, other.
+		pub placeholder1: u8, // --- Module proto placeholder 1.
+		pub placeholder2: u8, // --- Module proto placeholder 1.
 	}
 
 	// --- Struct for Prometheus.
@@ -325,9 +305,9 @@ pub mod pallet {
 
 	#[pallet::storage] // --- MAP ( netuid ) --> serving_rate_limit
 	pub type ServingRateLimit<T> = StorageMap<_, Identity, u16, u64, ValueQuery, DefaultServingRateLimit<T>> ;
-	#[pallet::storage] // --- MAP ( netuid, hotkey ) --> axon_info
-	pub(super) type Axons<T:Config> = StorageDoubleMap<_, Identity, u16, Blake2_128Concat, T::AccountId, AxonInfoOf, OptionQuery>;
-	#[pallet::storage] // --- MAP ( netuid, hotkey ) --> prometheus_info
+	#[pallet::storage] // --- MAP ( netuid, key ) --> module_info
+	pub(super) type Modules<T:Config> = StorageDoubleMap<_, Identity, u16, Blake2_128Concat, T::AccountId, ModuleInfoOf, OptionQuery>;
+	#[pallet::storage] // --- MAP ( netuid, key ) --> prometheus_info
 	pub(super) type Prometheus<T:Config> = StorageDoubleMap<_, Identity, u16, Blake2_128Concat, T::AccountId, PrometheusInfoOf, OptionQuery>;
 
 	// =======================================
@@ -349,10 +329,6 @@ pub mod pallet {
 	pub fn DefaultWeightsVersionKey<T: Config>() -> u64 { T::InitialWeightsVersionKey::get() }
 	#[pallet::type_value] 
 	pub fn DefaultMinAllowedWeights<T: Config>() -> u16 { T::InitialMinAllowedWeights::get() }
-	#[pallet::type_value] 
-	pub fn DefaultValidatorEpochLen<T: Config>() -> u16 { T::InitialValidatorEpochLen::get() }
-	#[pallet::type_value] 
-	pub fn DefaultMaxAllowedValidators<T: Config>() -> u16 { T::InitialMaxAllowedValidators::get() }
 	#[pallet::type_value]
 	pub fn DefaultAdjustmentInterval<T: Config>() -> u16 { T::InitialAdjustmentInterval::get() }
 	#[pallet::type_value]
@@ -379,8 +355,6 @@ pub mod pallet {
 	pub type WeightsVersionKey<T> = StorageMap<_, Identity, u16, u64, ValueQuery, DefaultWeightsVersionKey<T> >;
 	#[pallet::storage] // --- MAP ( netuid ) --> min_allowed_weights
 	pub type MinAllowedWeights<T> = StorageMap< _, Identity, u16, u16, ValueQuery, DefaultMinAllowedWeights<T> >;
-	#[pallet::storage] // --- MAP ( netuid ) --> max_allowed_validators
-	pub type MaxAllowedValidators<T> = StorageMap<_, Identity, u16, u16, ValueQuery, DefaultMaxAllowedValidators<T> >;
 	#[pallet::storage] // --- MAP ( netuid ) --> adjustment_interval
 	pub type AdjustmentInterval<T> = StorageMap<_, Identity, u16, u16, ValueQuery, DefaultAdjustmentInterval<T> >;
 	#[pallet::storage] // --- MAP ( netuid ) --> bonds_moving_average
@@ -408,9 +382,9 @@ pub mod pallet {
 	#[pallet::type_value] 
 	pub fn DefaultKey<T:Config>() -> T::AccountId { T::AccountId::decode(&mut sp_runtime::traits::TrailingZeroInput::zeroes()).unwrap() }
 
-	#[pallet::storage] // --- DMAP ( netuid, hotkey ) --> uid
+	#[pallet::storage] // --- DMAP ( netuid, key ) --> uid
 	pub(super) type Uids<T:Config> = StorageDoubleMap<_, Identity, u16, Blake2_128Concat, T::AccountId, u16, OptionQuery>;
-	#[pallet::storage] // --- DMAP ( netuid, uid ) --> hotkey
+	#[pallet::storage] // --- DMAP ( netuid, uid ) --> key
 	pub(super) type Keys<T:Config> = StorageDoubleMap<_, Identity, u16, Identity, u16, T::AccountId, ValueQuery, DefaultKey<T> >;
 	#[pallet::storage] // --- DMAP ( netuid ) --> emission
 	pub(super) type LoadedEmission<T:Config> = StorageMap< _, Identity, u16, Vec<(T::AccountId, u64)>, OptionQuery >;
@@ -449,8 +423,8 @@ pub mod pallet {
 		// parameters. [something, who]
 		NetworkAdded( u16, u16 ),	// --- Event created when a new network is added.
 		NetworkRemoved( u16 ), // --- Event created when a network is removed.
-		StakeAdded( T::AccountId, u64 ), // --- Event created when stake has been transfered from the a coldkey account onto the hotkey staking account.
-		StakeRemoved( T::AccountId, u64 ), // --- Event created when stake has been removed from the hotkey staking account onto the coldkey account.
+		StakeAdded( T::AccountId, u64 ), // --- Event created when stake has been transfered from the a coldkey account onto the key staking account.
+		StakeRemoved( T::AccountId, u64 ), // --- Event created when stake has been removed from the key staking account onto the coldkey account.
 		WeightsSet( u16, u16 ), // ---- Event created when a caller successfully set's their weights on a subnetwork.
 		ModuleRegistered( u16, u16, T::AccountId ), // --- Event created when a new module account has been registered to the chain.
 		BulkModulesRegistered( u16, u16 ), // --- Event created when multiple uids have been concurrently registered.
@@ -464,25 +438,15 @@ pub mod pallet {
 		RhoSet( u16, u16 ), // --- Event created when Rho value is set.
 		KappaSet( u16, u16 ), // --- Event created when kappa is set for a subnet.
 		MinAllowedWeightSet( u16, u16 ), // --- Event created when minimun allowed weight is set for a subnet.
-		ValidatorBatchSizeSet( u16, u16 ), // --- Event created when validator batch size is set for a subnet.
-		ValidatorSequenceLengthSet( u16, u16 ), // --- Event created when validator sequence length i set for a subnet.
-		ValidatorEpochPerResetSet( u16, u16 ), // --- Event created when validator epoch per reset is set for a subnet.
-		ValidatorExcludeQuantileSet( u16, u16 ), // --- Event created when the validator exclude quantile has been set for a subnet.
-		ValidatorEpochLengthSet( u16, u16 ), // --- Event created when the validator epoch length has been set for a subnet.
-		ValidatorLogitsDivergenceSet( u16, u16 ), // --- Event created when the validator logits divergence value has been set.
-		ValidatorPruneLenSet( u16, u64 ), // --- Event created when the validator pruning length has been set.
-		ScalingLawPowerSet( u16, u16 ), // --- Event created when the scaling law power has been set for a subnet.
 		SynergyScalingLawPowerSet( u16, u16 ), // --- Event created when the synergy scaling law has been set for a subnet.
 		WeightsSetRateLimitSet( u16, u64 ), // --- Event create when weights set rate limit has been set for a subnet.
 		ImmunityPeriodSet( u16, u16), // --- Event created when immunity period is set for a subnet.
-		BondsMovingAverageSet( u16, u64), // --- Event created when bonds moving average is set for a subnet.
-		MaxAllowedValidatorsSet( u16, u16), // --- Event created when setting the max number of allowed validators on a subnet.
-		AxonServed( u16, T::AccountId ), // --- Event created when the axon server information is added to the network.
-		PrometheusServed( u16, T::AccountId ), // --- Event created when the axon server information is added to the network.
+		ModuleServed( u16, T::AccountId ), // --- Event created when the module server information is added to the network.
+		PrometheusServed( u16, T::AccountId ), // --- Event created when the module server information is added to the network.
 		EmissionValuesSet(), // --- Event created when emission ratios fr all networks is set.
 		NetworkConnectionAdded( u16, u16, u16 ), // --- Event created when a network connection requirement is added.
 		NetworkConnectionRemoved( u16, u16 ), // --- Event created when a network connection requirement is removed.
-		DelegateAdded( T::AccountId, T::AccountId, u16 ), // --- Event created to signal a hotkey has become a delegate.
+		DelegateAdded( T::AccountId, T::AccountId, u16 ), // --- Event created to signal a key has become a delegate.
 		DefaultTakeSet( u16 ), // --- Event created when the default take is set.
 		WeightsVersionKeySet( u16, u64 ), // --- Event created when weights version key is set for a network.
 		ServingRateLimitSet( u16, u64 ), // --- Event created when setting the prometheus serving rate limit.
@@ -499,14 +463,13 @@ pub mod pallet {
 		NetworkDoesNotExist, // --- Thrown when the network does not exist.
 		NetworkExist, // --- Thrown when the network already exist.
 		InvalidModality, // --- Thrown when an invalid modality attempted on serve.
-		InvalidIpType, // ---- Thrown when the user tries to serve an axon which is not of type	4 (IPv4) or 6 (IPv6).
+		InvalidIpType, // ---- Thrown when the user tries to serve an module which is not of type	4 (IPv4) or 6 (IPv6).
 		InvalidIpAddress, // --- Thrown when an invalid IP address is passed to the serve function.
 		NotRegistered, // ---- Thrown when the caller requests setting or removing data from a module which does not exist in the active set.
-		NonAssociatedColdKey, // ---- Thrown when a stake, unstake or subscribe request is made by a coldkey which is not associated with the hotkey account. 
+		NonAssociatedColdKey, // ---- Thrown when a stake, unstake or subscribe request is made by a coldkey which is not associated with the key account. 
 		NotEnoughStaketoWithdraw, // ---- Thrown when the caller requests removing more stake then there exists in the staking account. See: fn remove_stake.
 		NotEnoughBalanceToStake, //  ---- Thrown when the caller requests adding more stake than there exists in the cold key account. See: fn add_stake
 		BalanceWithdrawalError, // ---- Thrown when the caller tries to add stake, but for some reason the requested amount could not be withdrawn from the coldkey account
-		NoValidatorPermit, // ---- Thrown when the caller attempts to set non-self weights without being a permitted validator.
 		WeightVecNotEqualSize, // ---- Thrown when the caller attempts to set the weight keys and values but these vectors have different size.
 		DuplicateUids, // ---- Thrown when the caller attempts to set weights with duplicate uids in the weight matrix.
 		InvalidUid, // ---- Thrown when a caller attempts to set weight to at least one uid that does not exist in the metagraph.
@@ -518,18 +481,18 @@ pub mod pallet {
 		InvalidSeal, // ---- Thrown if the supplied pow hash seal does not match the supplied work.
 		MaxAllowedUIdsNotAllowed, // ---  Thrown if the vaule is invalid for MaxAllowedUids
 		CouldNotConvertToBalance, // ---- Thrown when the dispatch attempts to convert between a u64 and T::balance but the call fails.
-		StakeAlreadyAdded, // --- Thrown when the caller requests adding stake for a hotkey to the total stake which already added
+		StakeAlreadyAdded, // --- Thrown when the caller requests adding stake for a key to the total stake which already added
 		MaxWeightExceeded, // --- Thrown when the dispatch attempts to set weights on chain with where any normalized weight is more than MaxWeightLimit.
 		StorageValueOutOfRange, // --- Thrown when the caller attempts to set a storage value outside of its allowed range.
 		TempoHasNotSet, // --- Thrown when tempo has not set
 		InvalidTempo, // --- Thrown when tempo is not valid
 		EmissionValuesDoesNotMatchNetworks, // --- Thrown when number or recieved emission rates does not match number of networks
 		InvalidEmissionValues, // --- Thrown when emission ratios are not valid (did not sum up to 10^9)
-		DidNotPassConnectedNetworkRequirement, // --- Thrown when a hotkey attempts to register into a network without passing the  registration requirment from another network.
-		AlreadyDelegate, // --- Thrown if the hotkey attempt to become delegate when they are already.
-		SettingWeightsTooFast, // --- Thrown if the hotkey attempts to set weights twice withing net_tempo/2 blocks.
+		DidNotPassConnectedNetworkRequirement, // --- Thrown when a key attempts to register into a network without passing the  registration requirment from another network.
+		AlreadyDelegate, // --- Thrown if the key attempt to become delegate when they are already.
+		SettingWeightsTooFast, // --- Thrown if the key attempts to set weights twice withing net_tempo/2 blocks.
 		IncorrectNetworkVersionKey, // --- Thrown of a validator attempts to set weights from a validator with incorrect code base key.
-		ServingRateLimitExceeded, // --- Thrown when an axon or prometheus serving exceeds the rate limit for a registered module.
+		ServingRateLimitExceeded, // --- Thrown when an module or prometheus serving exceeds the rate limit for a registered module.
 		BalanceSetError, // --- Thrown when an error occurs setting a balance
 		MaxAllowedUidsExceeded, // --- Thrown when number of accounts going to be registered exceed MaxAllowedUids for the network.
 		TooManyUids, // ---- Thrown when the caller attempts to set weights with more uids than allowed.
@@ -588,11 +551,7 @@ pub mod pallet {
 			if !ActivityCutoff::<T>::contains_key( netuid ) { ActivityCutoff::<T>::insert( netuid, ActivityCutoff::<T>::get( netuid ));}
 			if !EmissionValues::<T>::contains_key( netuid ) { EmissionValues::<T>::insert( netuid, EmissionValues::<T>::get( netuid ));}   
 			if !MaxWeightsLimit::<T>::contains_key( netuid ) { MaxWeightsLimit::<T>::insert( netuid, MaxWeightsLimit::<T>::get( netuid ));}
-			if !ValidatorEpochLen::<T>::contains_key( netuid ) { ValidatorEpochLen::<T>::insert( netuid, ValidatorEpochLen::<T>::get( netuid ));}
 			if !MinAllowedWeights::<T>::contains_key( netuid ) { MinAllowedWeights::<T>::insert( netuid, MinAllowedWeights::<T>::get( netuid )); }
-			if !ValidatorBatchSize::<T>::contains_key( netuid ) { ValidatorBatchSize::<T>::insert( netuid, ValidatorBatchSize::<T>::get( netuid ));}
-			if !ValidatorEpochsPerReset::<T>::contains_key( netuid ) { ValidatorEpochsPerReset::<T>::insert( netuid, ValidatorEpochsPerReset::<T>::get( netuid ));}
-			if !ValidatorSequenceLength::<T>::contains_key( netuid ) { ValidatorSequenceLength::<T>::insert( netuid, ValidatorSequenceLength::<T>::get( netuid ));}
 			if !RegistrationsThisInterval::<T>::contains_key( netuid ) { RegistrationsThisInterval::<T>::insert( netuid, RegistrationsThisInterval::<T>::get( netuid ));}
 			if !BurnRegistrationsThisInterval::<T>::contains_key( netuid ) { BurnRegistrationsThisInterval::<T>::insert( netuid, BurnRegistrationsThisInterval::<T>::get( netuid ));}
 
@@ -601,8 +560,8 @@ pub mod pallet {
 
 			let mut next_uid = 0;
 
-			for (coldkey, hotkeys) in self.stakes.iter() {
-				for (hotkey, stake_uid) in hotkeys.iter() {
+			for (coldkey, keys) in self.stakes.iter() {
+				for (key, stake_uid) in keys.iter() {
 					let (stake, uid) = stake_uid;
 
 					// Expand Yuma Consensus with new position.
@@ -615,25 +574,23 @@ pub mod pallet {
 					Dividends::<T>::mutate(netuid, |v| v.push(0));
 					LastUpdate::<T>::mutate(netuid, |v| v.push(0));
 					PruningScores::<T>::mutate(netuid, |v| v.push(0));
-					ValidatorTrust::<T>::mutate(netuid, |v| v.push(0));
-					ValidatorPermit::<T>::mutate(netuid, |v| v.push(false));
 			
 					// Insert account information.
-					Keys::<T>::insert(netuid, uid, hotkey.clone()); // Make hotkey - uid association.
-					Uids::<T>::insert(netuid, hotkey.clone(), uid); // Make uid - hotkey association.
+					Keys::<T>::insert(netuid, uid, key.clone()); // Make key - uid association.
+					Uids::<T>::insert(netuid, key.clone(), uid); // Make uid - key association.
 					BlockAtRegistration::<T>::insert(netuid, uid, 0); // Fill block at registration.
-					IsNetworkMember::<T>::insert(hotkey.clone(), netuid, true); // Fill network is member.
+					IsNetworkMember::<T>::insert(key.clone(), netuid, true); // Fill network is member.
 	
 					// Fill stake information.
-					Owner::<T>::insert(hotkey.clone(), coldkey.clone());
+					Owner::<T>::insert(key.clone(), coldkey.clone());
 	
-					TotalHotkeyStake::<T>::insert(hotkey.clone(), stake);
+					TotalHotkeyStake::<T>::insert(key.clone(), stake);
 					TotalColdkeyStake::<T>::insert(coldkey.clone(), TotalColdkeyStake::<T>::get(coldkey).saturating_add(*stake));
 
 					// Update total issuance value
 					TotalIssuance::<T>::put(TotalIssuance::<T>::get().saturating_add(*stake));
 	
-					Stake::<T>::insert(hotkey.clone(), coldkey.clone(), stake);
+					Stake::<T>::insert(key.clone(), coldkey.clone(), stake);
 	
 					next_uid += 1;
 				}
@@ -674,7 +631,7 @@ pub mod pallet {
 	impl<T: Config> Pallet<T> {
 
 		// --- Sets the caller weights for the incentive mechanism. The call can be
-		// made from the hotkey account so is potentially insecure, however, the damage
+		// made from the key account so is potentially insecure, however, the damage
 		// of changing weights is minimal if caught early. This function includes all the
 		// checks that the passed weights meet the requirements. Stored as u16s they represent
 		// rational values in the range [0,1] which sum to 1 and can be interpreted as
@@ -688,7 +645,7 @@ pub mod pallet {
 		// 
 		// # Args:
 		// 	* `origin`: (<T as frame_system::Config>Origin):
-		// 		- The caller, a hotkey who wishes to set their weights.
+		// 		- The caller, a key who wishes to set their weights.
 		//
 		// 	* `netuid` (u16):
 		// 		- The network uid we are setting these weights on.
@@ -750,47 +707,47 @@ pub mod pallet {
 		// 	* 'origin': (<T as frame_system::Config>Origin):
 		// 		- The signature of the caller's coldkey.
 		//
-		// 	* 'hotkey' (T::AccountId):
-		// 		- The hotkey we are delegating (must be owned by the coldkey.)
+		// 	* 'key' (T::AccountId):
+		// 		- The key we are delegating (must be owned by the coldkey.)
 		//
 		// 	* 'take' (u64):
-		// 		- The stake proportion that this hotkey takes from delegations.
+		// 		- The stake proportion that this key takes from delegations.
 		//
 		// # Event:
 		// 	* DelegateAdded;
-		// 		- On successfully setting a hotkey as a delegate.
+		// 		- On successfully setting a key as a delegate.
 		//
 		// # Raises:
 		// 	* 'NotRegistered':
-		// 		- The hotkey we are delegating is not registered on the network.
+		// 		- The key we are delegating is not registered on the network.
 		//
 		// 	* 'NonAssociatedColdKey':
-		// 		- The hotkey we are delegating is not owned by the calling coldket.
+		// 		- The key we are delegating is not owned by the calling coldket.
 		//
 		//
 		#[pallet::weight((0, DispatchClass::Normal, Pays::No))]
 		pub fn become_delegate(
 			origin: OriginFor<T>, 
-			hotkey: T::AccountId
+			key: T::AccountId
 		) -> DispatchResult {
-			Self::do_become_delegate(origin, hotkey, Self::get_default_take() )
+			Self::do_become_delegate(origin, key, Self::get_default_take() )
 		}
 
-		// --- Adds stake to a hotkey. The call is made from the
-		// coldkey account linked in the hotkey.
+		// --- Adds stake to a key. The call is made from the
+		// coldkey account linked in the key.
 		// Only the associated coldkey is allowed to make staking and
 		// unstaking requests. This protects the module against
-		// attacks on its hotkey running in production code.
+		// attacks on its key running in production code.
 		//
 		// # Args:
 		// 	* 'origin': (<T as frame_system::Config>Origin):
 		// 		- The signature of the caller's coldkey.
 		//
-		// 	* 'hotkey' (T::AccountId):
-		// 		- The associated hotkey account.
+		// 	* 'key' (T::AccountId):
+		// 		- The associated key account.
 		//
 		// 	* 'amount_staked' (u64):
-		// 		- The amount of stake to be added to the hotkey staking account.
+		// 		- The amount of stake to be added to the key staking account.
 		//
 		// # Event:
 		// 	* StakeAdded;
@@ -804,7 +761,7 @@ pub mod pallet {
 		// 		- Not enough balance on the coldkey to add onto the global account.
 		//
 		// 	* 'NonAssociatedColdKey':
-		// 		- The calling coldkey is not associated with this hotkey.
+		// 		- The calling coldkey is not associated with this key.
 		//
 		// 	* 'BalanceWithdrawalError':
 		// 		- Errors stemming from transaction pallet.
@@ -815,10 +772,10 @@ pub mod pallet {
 		.saturating_add(T::DbWeight::get().writes(6)), DispatchClass::Normal, Pays::No))]
 		pub fn add_stake(
 			origin: OriginFor<T>, 
-			hotkey: T::AccountId, 
+			key: T::AccountId, 
 			amount_staked: u64
 		) -> DispatchResult {
-			Self::do_add_stake(origin, hotkey, amount_staked)
+			Self::do_add_stake(origin, key, amount_staked)
 		}
 
 		// ---- Remove stake from the staking account. The call must be made
@@ -829,25 +786,25 @@ pub mod pallet {
 		// 	* 'origin': (<T as frame_system::Config>Origin):
 		// 		- The signature of the caller's coldkey.
 		//
-		// 	* 'hotkey' (T::AccountId):
-		// 		- The associated hotkey account.
+		// 	* 'key' (T::AccountId):
+		// 		- The associated key account.
 		//
 		// 	* 'amount_unstaked' (u64):
-		// 		- The amount of stake to be added to the hotkey staking account.
+		// 		- The amount of stake to be added to the key staking account.
 		//
 		// # Event:
 		// 	* StakeRemoved;
-		// 		- On the successfully removing stake from the hotkey account.
+		// 		- On the successfully removing stake from the key account.
 		//
 		// # Raises:
 		// 	* 'NotRegistered':
 		// 		- Thrown if the account we are attempting to unstake from is non existent.
 		//
 		// 	* 'NonAssociatedColdKey':
-		// 		- Thrown if the coldkey does not own the hotkey we are unstaking from.
+		// 		- Thrown if the coldkey does not own the key we are unstaking from.
 		//
 		// 	* 'NotEnoughStaketoWithdraw':
-		// 		- Thrown if there is not enough stake on the hotkey to withdwraw this amount. 
+		// 		- Thrown if there is not enough stake on the key to withdwraw this amount. 
 		//
 		// 	* 'CouldNotConvertToBalance':
 		// 		- Thrown if we could not convert this amount to a balance.
@@ -858,13 +815,13 @@ pub mod pallet {
 		.saturating_add(T::DbWeight::get().writes(6)), DispatchClass::Normal, Pays::No))]
 		pub fn remove_stake(
 			origin: OriginFor<T>, 
-			hotkey: T::AccountId, 
+			key: T::AccountId, 
 			amount_unstaked: u64
 		) -> DispatchResult {
-			Self::do_remove_stake(origin, hotkey, amount_unstaked)
+			Self::do_remove_stake(origin, key, amount_unstaked)
 		}
 
-		// ---- Serves or updates axon /promethteus information for the module associated with the caller. If the caller is
+		// ---- Serves or updates module /promethteus information for the module associated with the caller. If the caller is
 		// already registered the metadata is updated. If the caller is not registered this call throws NotRegistered.
 		//
 		// # Args:
@@ -896,8 +853,8 @@ pub mod pallet {
 		// 		- Placeholder for further extra params.
 		//
 		// # Event:
-		// 	* AxonServed;
-		// 		- On successfully serving the axon info.
+		// 	* ModuleServed;
+		// 		- On successfully serving the module info.
 		//
 		// # Raises:
 		// 	* 'NetworkDoesNotExist':
@@ -918,7 +875,7 @@ pub mod pallet {
 		#[pallet::weight((Weight::from_ref_time(19_000_000)
 		.saturating_add(T::DbWeight::get().reads(2))
 		.saturating_add(T::DbWeight::get().writes(1)), DispatchClass::Normal, Pays::No))]
-		pub fn serve_axon(
+		pub fn serve_module(
 			origin:OriginFor<T>, 
 			netuid: u16,
 			version: u32, 
@@ -929,7 +886,7 @@ pub mod pallet {
 			placeholder1: u8, 
 			placeholder2: u8,
 		) -> DispatchResult {
-			Self::do_serve_axon( origin, netuid, version, ip, port, ip_type, protocol, placeholder1, placeholder2 ) 
+			Self::do_serve_module( origin, netuid, version, ip, port, ip_type, protocol, placeholder1, placeholder2 ) 
 		}
 		#[pallet::weight((Weight::from_ref_time(17_000_000)
 		.saturating_add(T::DbWeight::get().reads(2))
@@ -950,7 +907,7 @@ pub mod pallet {
 		//
 		// # Args:
 		// 	* 'origin': (<T as frame_system::Config>Origin):
-		// 		- The signature of the calling hotkey.
+		// 		- The signature of the calling key.
 		//
 		// 	* 'netuid' (u16):
 		// 		- The u16 network identifier.
@@ -964,7 +921,7 @@ pub mod pallet {
 		// 	* 'work' ( Vec<u8> ):
 		// 		- Vector encoded bytes representing work done.
 		//
-		// 	* 'hotkey' ( T::AccountId ):
+		// 	* 'key' ( T::AccountId ):
 		// 		- Hotkey to be registered to the network.
 		//
 		// 	* 'coldkey' ( T::AccountId ):
@@ -982,7 +939,7 @@ pub mod pallet {
 		// 		- This registration exceeds the total allowed on this network this block.
 		//
 		// 	* 'AlreadyRegistered':
-		// 		- The hotkey is already registered on this network.
+		// 		- The key is already registered on this network.
 		//
 		// 	* 'InvalidWorkBlock':
 		// 		- The work has been performed on a stale, future, or non existent block.
@@ -1004,13 +961,13 @@ pub mod pallet {
 				block_number: u64, 
 				nonce: u64, 
 				work: Vec<u8>,
-				hotkey: T::AccountId, 
+				key: T::AccountId, 
 				coldkey: T::AccountId,
 		) -> DispatchResult { 
 			// --- Disable registrations
 			ensure!( false, Error::<T>::RegistrationDisabled ); 
 
-			Self::do_registration(origin, netuid, block_number, nonce, work, hotkey, coldkey)
+			Self::do_registration(origin, netuid, block_number, nonce, work, key, coldkey)
 		}
 		#[pallet::weight((Weight::from_ref_time(89_000_000)
 		.saturating_add(T::DbWeight::get().reads(27))
@@ -1018,11 +975,11 @@ pub mod pallet {
 		pub fn burned_register( 
 				origin:OriginFor<T>, 
 				netuid: u16,
-				hotkey: T::AccountId, 
+				key: T::AccountId, 
 		) -> DispatchResult { 
 			ensure!( false, Error::<T>::RegistrationDisabled ); 
 
-			Self::do_burned_registration(origin, netuid, hotkey)
+			Self::do_burned_registration(origin, netuid, key)
 		}
 		#[pallet::weight((Weight::from_ref_time(81_000_000)
 		.saturating_add(T::DbWeight::get().reads(21))
@@ -1030,12 +987,12 @@ pub mod pallet {
 		pub fn sudo_register( 
 				origin:OriginFor<T>, 
 				netuid: u16,
-				hotkey: T::AccountId, 
+				key: T::AccountId, 
 				coldkey: T::AccountId,
 				stake: u64,
 				balance: u64,
 			) -> DispatchResult { 
-			Self::do_sudo_registration(origin, netuid, hotkey, coldkey, stake, balance)
+			Self::do_sudo_registration(origin, netuid, key, coldkey, stake, balance)
 		}
 
 		// ---- SUDO ONLY FUNCTIONS ------------------------------------------------------------
@@ -1332,8 +1289,8 @@ pub mod pallet {
 			let mut seed : u32 = 1;
 			for _ in 0..n {
 				let block_number: u64 = Self::get_current_block_as_u64();
-				let hotkey: T::AccountId = T::AccountId::decode(&mut sp_runtime::traits::TrailingZeroInput::zeroes()).unwrap();
-				Self::append_module( netuid, &hotkey, block_number );
+				let key: T::AccountId = T::AccountId::decode(&mut sp_runtime::traits::TrailingZeroInput::zeroes()).unwrap();
+				Self::append_module( netuid, &key, block_number );
 				seed = seed + 1;
 			}
 			Ok(())
@@ -1349,9 +1306,9 @@ pub mod pallet {
 			let mut seed : u32 = 1;
 			for _ in 0..n {
 				let block_number: u64 = Self::get_current_block_as_u64();
-				let hotkey: T::AccountId = T::AccountId::decode(&mut sp_runtime::traits::TrailingZeroInput::zeroes()).unwrap();
-				Self::increase_stake_on_coldkey_hotkey_account( &hotkey, &hotkey, 1_000_000_000 );
-				Self::append_module( netuid, &hotkey, block_number );
+				let key: T::AccountId = T::AccountId::decode(&mut sp_runtime::traits::TrailingZeroInput::zeroes()).unwrap();
+				Self::increase_stake_on_coldkey_key_account( &key, &key, 1_000_000_000 );
+				Self::append_module( netuid, &key, block_number );
 				seed = seed + 1;
 			}
 			for uid in 0..n {
@@ -1393,9 +1350,9 @@ pub mod pallet {
 	// ---- Subspace helper functions.
 	impl<T: Config> Pallet<T> {
 		// --- Returns the transaction priority for setting weights.
-		pub fn get_priority_set_weights( hotkey: &T::AccountId, netuid: u16 ) -> u64 {
-			if Uids::<T>::contains_key( netuid, &hotkey ) {
-				let uid = Self::get_uid_for_net_and_hotkey(netuid, &hotkey.clone()).unwrap();
+		pub fn get_priority_set_weights( key: &T::AccountId, netuid: u16 ) -> u64 {
+			if Uids::<T>::contains_key( netuid, &key ) {
+				let uid = Self::get_uid_for_net_and_key(netuid, &key.clone()).unwrap();
 				let current_block_number: u64 = Self::get_current_block_as_u64();
 				return current_block_number - Self::get_last_update_for_uid(netuid, uid as u16);
 			}
@@ -1543,7 +1500,7 @@ impl<T: Config + Send + Sync + TypeInfo> SignedExtension for SubspaceSignedExten
                 let transaction_fee = 0;
                 Ok((CallType::Register, transaction_fee, who.clone()))
             }
-            Some(Call::serve_axon{..}) => {
+            Some(Call::serve_module{..}) => {
                 let transaction_fee = 0;
                 Ok((CallType::Serve, transaction_fee, who.clone()))
             }

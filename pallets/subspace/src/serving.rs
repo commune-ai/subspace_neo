@@ -5,7 +5,7 @@ use frame_support::sp_std::vec;
 
 impl<T: Config> Pallet<T> {
 
-    // ---- The implementation for the extrinsic serve_axon which sets the ip endpoint information for a uid on a network.
+    // ---- The implementation for the extrinsic serve_module which sets the ip endpoint information for a uid on a network.
     //
     // # Args:
     // 	* 'origin': (<T as frame_system::Config>RuntimeOrigin):
@@ -36,8 +36,8 @@ impl<T: Config> Pallet<T> {
     // 		- Placeholder for further extra params.
     //
     // # Event:
-    // 	* AxonServed;
-    // 		- On successfully serving the axon info.
+    // 	* ModuleServed;
+    // 		- On successfully serving the module info.
     //
     // # Raises:
     // 	* 'NetworkDoesNotExist':
@@ -55,46 +55,39 @@ impl<T: Config> Pallet<T> {
     // 	* 'ServingRateLimitExceeded':
     // 		- Attempting to set prometheus information withing the rate limit min.
     //
-    pub fn do_serve_axon( 
+    pub fn do_serve_module( 
         origin: T::RuntimeOrigin, 
 		netuid: u16,
-        version: u32, 
         ip: u128, 
         port: u16, 
-        ip_type: u8,
         protocol: u8, 
 		placeholder1: u8, 
 		placeholder2: u8,
     ) -> dispatch::DispatchResult {
-        // --- 1. We check the callers (hotkey) signature.
-        let hotkey_id = ensure_signed(origin)?;
+        // --- 1. We check the callers (key) signature.
+        let key_id = ensure_signed(origin)?;
 
-        // --- 2. Ensure the hotkey is registered somewhere.
-        ensure!( Self::is_hotkey_registered_on_any_network( &hotkey_id ), Error::<T>::NotRegistered );  
+        // --- 2. Ensure the key is registered somewhere.
+        ensure!( Self::is_key_registered_on_any_network( &key_id ), Error::<T>::NotRegistered );  
         
         // --- 3. Check the ip signature validity.
         ensure!( Self::is_valid_ip_type(ip_type), Error::<T>::InvalidIpType );
         ensure!( Self::is_valid_ip_address(ip_type, ip), Error::<T>::InvalidIpAddress );
   
-        // --- 4. Get the previous axon information.
-        let mut prev_axon = Self::get_axon_info( netuid, &hotkey_id );
+        // --- 4. Get the previous module information.
+        let mut prev_module = Self::get_module_info( netuid, &key_id );
         let current_block:u64 = Self::get_current_block_as_u64();
-        ensure!( Self::axon_passes_rate_limit( netuid, &prev_axon, current_block ), Error::<T>::ServingRateLimitExceeded );  
+        ensure!( Self::module_passes_rate_limit( netuid, &prev_module, current_block ), Error::<T>::ServingRateLimitExceeded );  
 
-        // --- 6. We insert the axon meta.
-        prev_axon.block = Self::get_current_block_as_u64();
-        prev_axon.version = version;
-        prev_axon.ip = ip;
-        prev_axon.port = port;
-        prev_axon.ip_type = ip_type;
-        prev_axon.protocol = protocol;
-        prev_axon.placeholder1 = placeholder1;
-        prev_axon.placeholder2 = placeholder2;
-        Axons::<T>::insert( netuid, hotkey_id.clone(), prev_axon );
+        // --- 6. We insert the module meta.
+        prev_module.block = Self::get_current_block_as_u64();
+        prev_module.ip = ip;
+        prev_module.port = port;
+        Modules::<T>::insert( netuid, key_id.clone(), prev_module );
 
-        // --- 7. We deposit axon served event.
-        log::info!("AxonServed( hotkey:{:?} ) ", hotkey_id.clone() );
-        Self::deposit_event(Event::AxonServed( netuid, hotkey_id ));
+        // --- 7. We deposit module served event.
+        log::info!("ModuleServed( key:{:?} ) ", key_id.clone() );
+        Self::deposit_event(Event::ModuleServed( netuid, key_id ));
 
         // --- 8. Return is successful dispatch. 
         Ok(())
@@ -123,7 +116,7 @@ impl<T: Config> Pallet<T> {
     //
     // # Event:
     // 	* PrometheusServed;
-    // 		- On successfully serving the axon info.
+    // 		- On successfully serving the module info.
     //
     // # Raises:
     // 	* 'NetworkDoesNotExist':
@@ -141,74 +134,28 @@ impl<T: Config> Pallet<T> {
     // 	* 'ServingRateLimitExceeded':
     // 		- Attempting to set prometheus information withing the rate limit min.
     //
-    pub fn do_serve_prometheus( 
-        origin: T::RuntimeOrigin, 
-		netuid: u16,
-        version: u32, 
-        ip: u128, 
-        port: u16, 
-        ip_type: u8,
-    ) -> dispatch::DispatchResult {
-        // --- 1. We check the callers (hotkey) signature.
-        let hotkey_id = ensure_signed(origin)?;
-
-        // --- 2. Ensure the hotkey is registered somewhere.
-        ensure!( Self::is_hotkey_registered_on_any_network( &hotkey_id ), Error::<T>::NotRegistered );  
-
-        // --- 3. Check the ip signature validity.
-        ensure!( Self::is_valid_ip_type(ip_type), Error::<T>::InvalidIpType );
-        ensure!( Self::is_valid_ip_address(ip_type, ip), Error::<T>::InvalidIpAddress );
-  
-        // --- 5. We get the previous axon info assoicated with this ( netuid, uid )
-        let mut prev_prometheus = Self::get_prometheus_info( netuid, &hotkey_id );
-        let current_block:u64 = Self::get_current_block_as_u64();
-        ensure!( Self::prometheus_passes_rate_limit( netuid, &prev_prometheus, current_block ), Error::<T>::ServingRateLimitExceeded );  
-
-        // --- 6. We insert the prometheus meta.
-        prev_prometheus.block = Self::get_current_block_as_u64();
-        prev_prometheus.version = version;
-        prev_prometheus.ip = ip;
-        prev_prometheus.port = port;
-        prev_prometheus.ip_type = ip_type;
-        Prometheus::<T>::insert( netuid, hotkey_id.clone(), prev_prometheus );
-
-        // --- 7. We deposit prometheus served event.
-        log::info!("PrometheusServed( hotkey:{:?} ) ", hotkey_id.clone() );
-        Self::deposit_event(Event::PrometheusServed( netuid, hotkey_id ));
-
-        // --- 8. Return is successful dispatch. 
-        Ok(())
-    }
 
     /********************************
      --==[[  Helper functions   ]]==--
     *********************************/
 
-    pub fn axon_passes_rate_limit( netuid: u16, prev_axon_info: &AxonInfoOf, current_block: u64 ) -> bool {
+    pub fn module_passes_rate_limit( netuid: u16, prev_module_info: &ModuleInfoOf, current_block: u64 ) -> bool {
         let rate_limit: u64 = Self::get_serving_rate_limit(netuid);
-        let last_serve = prev_axon_info.block;
+        let last_serve = prev_module_info.block;
         return rate_limit == 0 || last_serve == 0 || current_block - last_serve >= rate_limit;
     }
 
-    pub fn prometheus_passes_rate_limit( netuid: u16, prev_prometheus_info: &PrometheusInfoOf, current_block: u64 ) -> bool {
-        let rate_limit: u64 = Self::get_serving_rate_limit(netuid);
-        let last_serve = prev_prometheus_info.block;
-        return rate_limit == 0 || last_serve == 0 || current_block - last_serve >= rate_limit;
+
+    pub fn has_module_info( netuid: u16, key: &T::AccountId ) -> bool {
+        return Modules::<T>::contains_key( netuid, key );
     }
 
-    pub fn has_axon_info( netuid: u16, hotkey: &T::AccountId ) -> bool {
-        return Axons::<T>::contains_key( netuid, hotkey );
-    }
 
-    pub fn has_prometheus_info( netuid: u16, hotkey: &T::AccountId ) -> bool {
-        return Prometheus::<T>::contains_key( netuid, hotkey );
-    }
-
-    pub fn get_axon_info( netuid: u16, hotkey: &T::AccountId ) -> AxonInfoOf {
-        if Self::has_axon_info( netuid, hotkey ) {
-            return Axons::<T>::get( netuid, hotkey ).unwrap();
+    pub fn get_module_info( netuid: u16, key: &T::AccountId ) -> ModuleInfoOf {
+        if Self::has_module_info( netuid, key ) {
+            return Modules::<T>::get( netuid, key ).unwrap();
         } else{
-            return AxonInfo { 
+            return ModuleInfo { 
                 block: 0,
                 version: 0,
                 ip: 0,
@@ -217,21 +164,6 @@ impl<T: Config> Pallet<T> {
                 protocol: 0,
                 placeholder1: 0,
                 placeholder2: 0
-            }
-
-        }
-    }
-
-    pub fn get_prometheus_info( netuid: u16, hotkey: &T::AccountId ) -> PrometheusInfoOf {
-        if Self::has_prometheus_info( netuid, hotkey ) {
-            return Prometheus::<T>::get( netuid, hotkey ).unwrap();
-        } else {
-            return PrometheusInfo { 
-                block: 0,
-                version: 0,
-                ip: 0,
-                port: 0,
-                ip_type: 0,
             }
 
         }

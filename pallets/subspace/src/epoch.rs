@@ -7,7 +7,7 @@ use frame_support::storage::IterableStorageDoubleMap;
 
 impl<T: Config> Pallet<T> {
 
-    // Calculates reward consensus and returns the emissions for uids/hotkeys in a given `netuid`.
+    // Calculates reward consensus and returns the emissions for uids/keys in a given `netuid`.
     // (Dense version used only for testing purposes.)
     pub fn epoch_dense( netuid: u16, rao_emission: u64 ) -> Vec<(T::AccountId, u64)> {
   
@@ -49,16 +49,16 @@ impl<T: Config> Pallet<T> {
         // ===========
         // == Stake ==
         // ===========
-        let mut hotkeys: Vec<(u16, T::AccountId)> = vec![];
-        for ( uid_i, hotkey ) in < Keys<T> as IterableStorageDoubleMap<u16, u16, T::AccountId >>::iter_prefix( netuid ) {
-            hotkeys.push( (uid_i, hotkey) ); 
+        let mut keys: Vec<(u16, T::AccountId)> = vec![];
+        for ( uid_i, key ) in < Keys<T> as IterableStorageDoubleMap<u16, u16, T::AccountId >>::iter_prefix( netuid ) {
+            keys.push( (uid_i, key) ); 
         }
-        log::trace!( "hotkeys: {:?}", &hotkeys );
+        log::trace!( "keys: {:?}", &keys );
 
         // Access network stake as normalized vector.
         let mut stake_64: Vec<I64F64> = vec![ I64F64::from_num(0.0); n as usize ];
-        for (uid_i, hotkey) in hotkeys.iter() {
-            stake_64[ *uid_i as usize ] = I64F64::from_num( Self::get_total_stake_for_hotkey( hotkey ) );
+        for (uid_i, key) in keys.iter() {
+            stake_64[ *uid_i as usize ] = I64F64::from_num( Self::get_total_stake_for_key( key ) );
         }
         inplace_normalize_64( &mut stake_64 );
         let stake: Vec<I32F32> = vec_fixed64_to_fixed32( stake_64 );
@@ -76,21 +76,6 @@ impl<T: Config> Pallet<T> {
         // == Validator permits ==
         // =======================
 
-        // Get validator permits.
-        let validator_permits: Vec<bool> = Self::get_validator_permit( netuid );
-        log::trace!( "validator_permits: {:?}", validator_permits );
-
-        // Logical negation of validator_permits.
-        let validator_forbids: Vec<bool> = validator_permits.iter().map(|&b| !b).collect();
-
-        // Get max allowed validators.
-        let max_allowed_validators: u16 = Self::get_max_allowed_validators( netuid );
-        log::trace!( "max_allowed_validators: {:?}", max_allowed_validators );
-
-        // Get new validator permits.
-        let new_validator_permits: Vec<bool> = is_topk( &stake, max_allowed_validators as usize );
-        log::trace!( "new_validator_permits: {:?}", new_validator_permits );
-
         // =============
         // == Weights ==
         // =============
@@ -99,9 +84,6 @@ impl<T: Config> Pallet<T> {
         let mut weights: Vec<Vec<I32F32>> = Self::get_weights( netuid );
         log::trace!( "W:\n{:?}\n", &weights );
 
-        // Mask weights that are not from permitted validators.
-        inplace_mask_rows( &validator_forbids, &mut weights );
-        // log::trace!( "W (permit): {:?}", &weights );
 
         // Remove self-weight by masking diagonal.
         inplace_mask_diag( &mut weights );
@@ -116,7 +98,7 @@ impl<T: Config> Pallet<T> {
         // log::trace!( "W (mask+norm):\n{:?}\n", &weights );
 
         // ================================
-        // == Consensus, Validator Trust ==
+        // == Consensus ==
         // ================================
 
         // Compute preranks: r_j = SUM(i) w_ij * s_i
@@ -126,7 +108,6 @@ impl<T: Config> Pallet<T> {
         let kappa: I32F32 = Self::get_float_kappa( netuid );  // consensus majority ratio, e.g. 51%.
         let consensus: Vec<I32F32> = weighted_median_col( &active_stake, &weights, kappa );
         inplace_col_clip( &mut weights, &consensus );
-        let validator_trust: Vec<I32F32> = row_sum( &weights );
 
         // ====================================
         // == Ranks, Server Trust, Incentive ==
@@ -207,7 +188,6 @@ impl<T: Config> Pallet<T> {
         let cloned_incentive: Vec<u16> = incentive.iter().map(|xi| fixed_proportion_to_u16(*xi)).collect::<Vec<u16>>();
         let cloned_dividends: Vec<u16> = dividends.iter().map(|xi| fixed_proportion_to_u16(*xi)).collect::<Vec<u16>>();
         let cloned_pruning_scores: Vec<u16> = pruning_scores.iter().map(|xi| fixed_proportion_to_u16(*xi)).collect::<Vec<u16>>();
-        let cloned_validator_trust: Vec<u16> = validator_trust.iter().map(|xi| fixed_proportion_to_u16(*xi)).collect::<Vec<u16>>();
         Active::<T>::insert( netuid, active.clone() );
         Emission::<T>::insert( netuid, cloned_emission );
         Rank::<T>::insert( netuid, cloned_ranks);
@@ -216,32 +196,23 @@ impl<T: Config> Pallet<T> {
         Incentive::<T>::insert( netuid, cloned_incentive );
         Dividends::<T>::insert( netuid, cloned_dividends );
         PruningScores::<T>::insert( netuid, cloned_pruning_scores );
-        ValidatorTrust::<T>::insert( netuid, cloned_validator_trust );
-        ValidatorPermit::<T>::insert( netuid, new_validator_permits.clone() );
 
         for i in 0..n {
-            // Set bonds only if uid retains validator permit, otherwise clear bonds.
-            if new_validator_permits[i as usize] {
-                let new_bonds_row: Vec<(u16,u16)> = (0..n).zip( vec_fixed_proportions_to_u16( ema_bonds[i as usize].clone() ) ).collect();
-                Bonds::<T>::insert( netuid, i, new_bonds_row );
-            }
-            else if validator_permits[ i as usize ] {
-                // Only overwrite the intersection.
-                let new_empty_bonds_row: Vec<(u16,u16)> = vec![];
-                Bonds::<T>::insert( netuid, i, new_empty_bonds_row );
-            }
+            let new_bonds_row: Vec<(u16,u16)> = (0..n).zip( vec_fixed_proportions_to_u16( ema_bonds[i as usize].clone() ) ).collect();
+            Bonds::<T>::insert( netuid, i, new_bonds_row );
+           
         }
 
         let mut result: Vec<(T::AccountId, u64)> = vec![]; 
-        for ( uid_i, hotkey ) in hotkeys.iter() {
-            result.push( ( hotkey.clone(), emission[ *uid_i as usize ] ) );
+        for ( uid_i, key ) in keys.iter() {
+            result.push( ( key.clone(), emission[ *uid_i as usize ] ) );
         }
         result
 
     }
 
     // Calculates reward consensus values, then updates rank, trust, consensus, incentive, dividend, pruning_score, emission and bonds, and 
-    // returns the emissions for uids/hotkeys in a given `netuid`.
+    // returns the emissions for uids/keys in a given `netuid`.
     //
     // # Args:
     // 	* 'netuid': ( u16 ):
@@ -289,16 +260,16 @@ impl<T: Config> Pallet<T> {
         // == Stake ==
         // ===========
 
-        let mut hotkeys: Vec<(u16, T::AccountId)> = vec![];
-        for ( uid_i, hotkey ) in < Keys<T> as IterableStorageDoubleMap<u16, u16, T::AccountId >>::iter_prefix( netuid ) {
-            hotkeys.push( (uid_i, hotkey) ); 
+        let mut keys: Vec<(u16, T::AccountId)> = vec![];
+        for ( uid_i, key ) in < Keys<T> as IterableStorageDoubleMap<u16, u16, T::AccountId >>::iter_prefix( netuid ) {
+            keys.push( (uid_i, key) ); 
         }
-        log::trace!( "hotkeys: {:?}", &hotkeys );
+        log::trace!( "keys: {:?}", &keys );
 
         // Access network stake as normalized vector.
         let mut stake_64: Vec<I64F64> = vec![ I64F64::from_num(0.0); n as usize ];
-        for (uid_i, hotkey) in hotkeys.iter() {
-            stake_64[ *uid_i as usize ] = I64F64::from_num( Self::get_total_stake_for_hotkey( hotkey ) );
+        for (uid_i, key) in keys.iter() {
+            stake_64[ *uid_i as usize ] = I64F64::from_num( Self::get_total_stake_for_key( key ) );
         }
         inplace_normalize_64( &mut stake_64 );
         let stake: Vec<I32F32> = vec_fixed64_to_fixed32( stake_64 );
@@ -314,25 +285,6 @@ impl<T: Config> Pallet<T> {
         inplace_normalize( &mut active_stake );
         log::trace!( "S (mask+norm): {:?}", &active_stake );
 
-        // =======================
-        // == Validator permits ==
-        // =======================
-
-        // Get current validator permits.
-        let validator_permits: Vec<bool> = Self::get_validator_permit( netuid );
-        log::trace!( "validator_permits: {:?}", validator_permits );
-
-        // Logical negation of validator_permits.
-        let validator_forbids: Vec<bool> = validator_permits.iter().map(|&b| !b).collect();
-
-        // Get max allowed validators.
-        let max_allowed_validators: u16 = Self::get_max_allowed_validators( netuid );
-        log::trace!( "max_allowed_validators: {:?}", max_allowed_validators );
-
-        // Get new validator permits.
-        let new_validator_permits: Vec<bool> = is_topk( &stake, max_allowed_validators as usize );
-        log::trace!( "new_validator_permits: {:?}", new_validator_permits );
-
         // =============
         // == Weights ==
         // =============
@@ -340,10 +292,6 @@ impl<T: Config> Pallet<T> {
         // Access network weights row normalized.
         let mut weights: Vec<Vec<(u16, I32F32)>> = Self::get_weights_sparse( netuid );
         // log::trace!( "W: {:?}", &weights );
-
-        // Mask weights that are not from permitted validators.
-        weights = mask_rows_sparse( &validator_forbids, &weights );
-        // log::trace!( "W (permit): {:?}", &weights );
 
         // Remove self-weight by masking diagonal.
         weights = mask_diag_sparse( &weights );
@@ -358,7 +306,7 @@ impl<T: Config> Pallet<T> {
         // log::trace!( "W (mask+norm): {:?}", &weights );
 
         // ================================
-        // == Consensus, Validator Trust ==
+        // == Consensus ==
         // ================================
         
         // Compute preranks: r_j = SUM(i) w_ij * s_i
@@ -373,8 +321,6 @@ impl<T: Config> Pallet<T> {
         weights = col_clip_sparse( &weights, &consensus );
         // log::trace!( "W: {:?}", &weights );
 
-        let validator_trust: Vec<I32F32> = row_sum_sparse( &weights );
-        log::trace!( "Tv: {:?}", &validator_trust );
 
         // =============================
         // == Ranks, Trust, Incentive ==
@@ -470,7 +416,6 @@ impl<T: Config> Pallet<T> {
         let cloned_incentive: Vec<u16> = incentive.iter().map(|xi| fixed_proportion_to_u16(*xi)).collect::<Vec<u16>>();
         let cloned_dividends: Vec<u16> = dividends.iter().map(|xi| fixed_proportion_to_u16(*xi)).collect::<Vec<u16>>();
         let cloned_pruning_scores: Vec<u16> = pruning_scores.iter().map(|xi| fixed_proportion_to_u16(*xi)).collect::<Vec<u16>>();
-        let cloned_validator_trust: Vec<u16> = validator_trust.iter().map(|xi| fixed_proportion_to_u16(*xi)).collect::<Vec<u16>>();
         Active::<T>::insert( netuid, active.clone() );
         Emission::<T>::insert( netuid, cloned_emission );
         Rank::<T>::insert( netuid, cloned_ranks);
@@ -479,32 +424,21 @@ impl<T: Config> Pallet<T> {
         Incentive::<T>::insert( netuid, cloned_incentive );
         Dividends::<T>::insert( netuid, cloned_dividends );
         PruningScores::<T>::insert( netuid, cloned_pruning_scores );
-        ValidatorTrust::<T>::insert( netuid, cloned_validator_trust );
-        ValidatorPermit::<T>::insert( netuid, new_validator_permits.clone() );
 
         for i in 0..n {
             // Set bonds only if uid retains validator permit, otherwise clear bonds.
-            if new_validator_permits[i as usize] {
-                let new_bonds_row: Vec<(u16,u16)> = ema_bonds[i as usize].iter().map( |(j, value)| (*j, fixed_proportion_to_u16(*value))).collect();
-                Bonds::<T>::insert( netuid, i, new_bonds_row );
-            }
-            else if validator_permits[ i as usize ] {
-                // Only overwrite the intersection.
-                let new_empty_bonds_row: Vec<(u16,u16)> = vec![];
-                Bonds::<T>::insert( netuid, i, new_empty_bonds_row );
-            }
+            let new_bonds_row: Vec<(u16,u16)> = ema_bonds[i as usize].iter().map( |(j, value)| (*j, fixed_proportion_to_u16(*value))).collect();
+            Bonds::<T>::insert( netuid, i, new_bonds_row );
+
         }
 
-        // Emission tuples ( hotkeys, u64 emission)
+        // Emission tuples ( keys, u64 emission)
         let mut result: Vec<(T::AccountId, u64)> = vec![]; 
-        for ( uid_i, hotkey ) in hotkeys.iter() {
-            result.push( ( hotkey.clone(), emission[ *uid_i as usize ] ) );
+        for ( uid_i, key ) in keys.iter() {
+            result.push( ( key.clone(), emission[ *uid_i as usize ] ) );
         }
         result
     }
-
-    pub fn get_float_rho( netuid:u16 ) -> I32F32 { I32F32::from_num( Self::get_rho( netuid ) )  }
-    pub fn get_float_kappa( netuid:u16 ) -> I32F32 { I32F32::from_num( Self::get_kappa( netuid )  ) / I32F32::from_num( u16::MAX ) }
 
     pub fn get_normalized_stake( netuid:u16 ) -> Vec<I32F32> {
         let n: usize = Self::get_subnetwork_n( netuid ) as usize; 

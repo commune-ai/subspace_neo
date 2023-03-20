@@ -12,7 +12,7 @@ impl<T: Config> Pallet<T> {
         log::debug!("block_step for block: {:?} ", block_number );
         // --- 1. Adjust difficulties.
 		Self::adjust_registration_terms_for_networks( );
-        // --- 2. Drains emission tuples ( hotkey, amount ).
+        // --- 2. Drains emission tuples ( key, amount ).
         Self::drain_emission( block_number );
         // --- 3. Generates emission tuples from epoch functions.
 		Self::generate_emission( block_number );
@@ -55,7 +55,7 @@ impl<T: Config> Pallet<T> {
     pub fn has_loaded_emission_tuples( netuid: u16 ) -> bool { LoadedEmission::<T>::contains_key( netuid ) }
     pub fn get_loaded_emission_tuples( netuid: u16 ) -> Vec<(T::AccountId, u64)> { LoadedEmission::<T>::get( netuid ).unwrap() }
 
-    // Reads from the loaded emission storage which contains lists of pending emission tuples ( hotkey, amount )
+    // Reads from the loaded emission storage which contains lists of pending emission tuples ( key, amount )
     // and distributes small chunks of them at a time.
     //
     pub fn drain_emission( _: u64 ) {
@@ -63,8 +63,8 @@ impl<T: Config> Pallet<T> {
         for ( netuid, _ ) in <Tempo<T> as IterableStorageMap<u16, u16>>::iter() {
             if !Self::has_loaded_emission_tuples( netuid ) { continue } // There are no tuples to emit.
             let tuples_to_drain: Vec<(T::AccountId, u64)> = Self::get_loaded_emission_tuples( netuid );
-            for (hotkey, amount) in tuples_to_drain.iter() {                 
-                Self::emit_inflation_through_hotkey_account( &hotkey, *amount );
+            for (key, amount) in tuples_to_drain.iter() {                 
+                Self::emit_inflation_through_key_account( &key, *amount );
             }            
             LoadedEmission::<T>::remove( netuid );
         }
@@ -95,7 +95,7 @@ impl<T: Config> Pallet<T> {
             let emission_to_drain:u64 = PendingEmission::<T>::get( netuid ); 
             PendingEmission::<T>::insert( netuid, 0 );
 
-            // --- 5. Run the epoch mechanism and return emission tuples for hotkeys in the network.
+            // --- 5. Run the epoch mechanism and return emission tuples for keys in the network.
             let emission_tuples_this_block: Vec<(T::AccountId, u64)> = Self::epoch( netuid, emission_to_drain );
                 
             // --- 6. Check that the emission does not exceed the allowed total.
@@ -116,48 +116,48 @@ impl<T: Config> Pallet<T> {
             Self::set_last_mechanism_step_block( netuid, block_number );        
         }
     }
-    // Distributes token inflation through the hotkey based on emission. The call ensures that the inflation
+    // Distributes token inflation through the key based on emission. The call ensures that the inflation
     // is distributed onto the accounts in proportion of the stake delegated minus the take. This function
     // is called after an epoch to distribute the newly minted stake according to delegation.
     //
-    pub fn emit_inflation_through_hotkey_account( hotkey: &T::AccountId, emission: u64) {
+    pub fn emit_inflation_through_key_account( key: &T::AccountId, emission: u64) {
         
-        // --- 1. Check if the hotkey is a delegate. If not, we simply pass the stake through to the 
-        // coldkye - hotkey account as normal.
-        if !Self::hotkey_is_delegate( hotkey ) { 
-            Self::increase_stake_on_hotkey_account( &hotkey, emission ); 
+        // --- 1. Check if the key is a delegate. If not, we simply pass the stake through to the 
+        // coldkye - key account as normal.
+        if !Self::key_is_delegate( key ) { 
+            Self::increase_stake_on_key_account( &key, emission ); 
             return; 
         }
 
-        // --- 2. The hotkey is a delegate. We first distribute a proportion of the emission to the hotkey
+        // --- 2. The key is a delegate. We first distribute a proportion of the emission to the key
         // directly as a function of its 'take'
-        let total_hotkey_stake: u64 = Self::get_total_stake_for_hotkey( hotkey );
-        let delegate_take: u64 = Self::calculate_delegate_proportional_take( hotkey, emission );
+        let total_key_stake: u64 = Self::get_total_stake_for_key( key );
+        let delegate_take: u64 = Self::calculate_delegate_proportional_take( key, emission );
         let remaining_emission: u64 = emission - delegate_take;
 
         // 3. -- The remaining emission goes to the owners in proportion to the stake delegated.
-        for ( owning_coldkey_i, stake_i ) in < Stake<T> as IterableStorageDoubleMap<T::AccountId, T::AccountId, u64 >>::iter_prefix( hotkey ) {
+        for ( owning_coldkey_i, stake_i ) in < Stake<T> as IterableStorageDoubleMap<T::AccountId, T::AccountId, u64 >>::iter_prefix( key ) {
             
             // --- 4. The emission proportion is remaining_emission * ( stake / total_stake ).
-            let stake_proportion: u64 = Self::calculate_stake_proportional_emission( stake_i, total_hotkey_stake, remaining_emission );
-            Self::increase_stake_on_coldkey_hotkey_account( &owning_coldkey_i, &hotkey, stake_proportion );
-            log::debug!("owning_coldkey_i: {:?} hotkey: {:?} emission: +{:?} ", owning_coldkey_i, hotkey, stake_proportion );
+            let stake_proportion: u64 = Self::calculate_stake_proportional_emission( stake_i, total_key_stake, remaining_emission );
+            Self::increase_stake_on_coldkey_key_account( &owning_coldkey_i, &key, stake_proportion );
+            log::debug!("owning_coldkey_i: {:?} key: {:?} emission: +{:?} ", owning_coldkey_i, key, stake_proportion );
 
         }
 
         // --- 5. Last increase final account balance of delegate after 4, since 5 will change the stake proportion of 
         // the delegate and effect calculation in 4.
-        Self::increase_stake_on_hotkey_account( &hotkey, delegate_take );
-        log::debug!("delkey: {:?} delegate_take: +{:?} ", hotkey,delegate_take );
+        Self::increase_stake_on_key_account( &key, delegate_take );
+        log::debug!("delkey: {:?} delegate_take: +{:?} ", key,delegate_take );
     }
 
     // Increases the stake on the cold - hot pairing by increment while also incrementing other counters.
     // This function should be called rather than set_stake under account.
     // 
-    pub fn block_step_increase_stake_on_coldkey_hotkey_account( coldkey: &T::AccountId, hotkey: &T::AccountId, increment: u64 ){
+    pub fn block_step_increase_stake_on_coldkey_key_account( coldkey: &T::AccountId, key: &T::AccountId, increment: u64 ){
         TotalColdkeyStake::<T>::mutate( coldkey, | old | old.saturating_add( increment ) );
-        TotalHotkeyStake::<T>::insert( hotkey, TotalHotkeyStake::<T>::get(hotkey).saturating_add( increment ) );
-        Stake::<T>::insert( hotkey, coldkey, Stake::<T>::get( hotkey, coldkey).saturating_add( increment ) );
+        TotalHotkeyStake::<T>::insert( key, TotalHotkeyStake::<T>::get(key).saturating_add( increment ) );
+        Stake::<T>::insert( key, coldkey, Stake::<T>::get( key, coldkey).saturating_add( increment ) );
         TotalStake::<T>::put( TotalStake::<T>::get().saturating_add( increment ) );
         TotalIssuance::<T>::put( TotalIssuance::<T>::get().saturating_add( increment ) );
 
@@ -165,15 +165,15 @@ impl<T: Config> Pallet<T> {
 
     // Decreases the stake on the cold - hot pairing by the decrement while decreasing other counters.
     //
-    pub fn block_step_decrease_stake_on_coldkey_hotkey_account( coldkey: &T::AccountId, hotkey: &T::AccountId, decrement: u64 ){
+    pub fn block_step_decrease_stake_on_coldkey_key_account( coldkey: &T::AccountId, key: &T::AccountId, decrement: u64 ){
         TotalColdkeyStake::<T>::mutate( coldkey, | old | old.saturating_sub( decrement ) );
-        TotalHotkeyStake::<T>::insert( hotkey, TotalHotkeyStake::<T>::get(hotkey).saturating_sub( decrement ) );
-        Stake::<T>::insert( hotkey, coldkey, Stake::<T>::get( hotkey, coldkey).saturating_sub( decrement ) );
+        TotalHotkeyStake::<T>::insert( key, TotalHotkeyStake::<T>::get(key).saturating_sub( decrement ) );
+        Stake::<T>::insert( key, coldkey, Stake::<T>::get( key, coldkey).saturating_sub( decrement ) );
         TotalStake::<T>::put( TotalStake::<T>::get().saturating_sub( decrement ) );
         TotalIssuance::<T>::put( TotalIssuance::<T>::get().saturating_sub( decrement ) );
     }
 
-    // Returns emission awarded to a hotkey as a function of its proportion of the total stake.
+    // Returns emission awarded to a key as a function of its proportion of the total stake.
     //
     pub fn calculate_stake_proportional_emission( stake: u64, total_stake:u64, emission: u64 ) -> u64 {
         if total_stake == 0 { return 0 };
@@ -184,9 +184,9 @@ impl<T: Config> Pallet<T> {
 
     // Returns the delegated stake 'take' assigend to this key. (If exists, otherwise 0)
     //
-    pub fn calculate_delegate_proportional_take( hotkey: &T::AccountId, emission: u64 ) -> u64 {
-        if Self::hotkey_is_delegate( hotkey ) {
-            let take_proportion: I64F64 = I64F64::from_num( Delegates::<T>::get( hotkey ) ) / I64F64::from_num( u16::MAX );
+    pub fn calculate_delegate_proportional_take( key: &T::AccountId, emission: u64 ) -> u64 {
+        if Self::key_is_delegate( key ) {
+            let take_proportion: I64F64 = I64F64::from_num( Delegates::<T>::get( key ) ) / I64F64::from_num( u16::MAX );
             let take_emission: I64F64 = take_proportion * I64F64::from_num( emission );
             return take_emission.to_num::<u64>();
         } else {
@@ -218,9 +218,7 @@ impl<T: Config> Pallet<T> {
 
                 // --- 4. Get the current counters for this network w.r.t burn and difficulty values.
                 let current_burn: u64 = Self::get_burn_as_u64( netuid );
-                let current_difficulty: u64 = Self::get_difficulty_as_u64( netuid );
                 let registrations_this_interval: u16 = Self::get_registrations_this_interval( netuid );
-                let pow_registrations_this_interval: u16 = Self::get_pow_registrations_this_interval( netuid );
                 let burn_registrations_this_interval: u16 = Self::get_burn_registrations_this_interval( netuid );
                 let target_registrations_this_interval: u16 = Self::get_target_registrations_per_interval( netuid );
                 // --- 5. Adjust burn + pow

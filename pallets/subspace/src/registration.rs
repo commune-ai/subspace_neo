@@ -16,18 +16,18 @@ impl<T: Config> Pallet<T> {
     pub fn do_sudo_registration( 
         origin: T::RuntimeOrigin,
         netuid: u16, 
-        hotkey: T::AccountId, 
+        key: T::AccountId, 
         coldkey: T::AccountId,
         stake: u64,
         balance: u64,
     ) -> DispatchResult {
         ensure_root( origin )?;        
         ensure!( Self::if_subnet_exist( netuid ), Error::<T>::NetworkDoesNotExist ); 
-        ensure!( !Uids::<T>::contains_key( netuid, &hotkey ), Error::<T>::AlreadyRegistered );
+        ensure!( !Uids::<T>::contains_key( netuid, &key ), Error::<T>::AlreadyRegistered );
 
-        Self::create_account_if_non_existent( &coldkey, &hotkey);         
-        ensure!( Self::coldkey_owns_hotkey( &coldkey, &hotkey ), Error::<T>::NonAssociatedColdKey );
-        Self::increase_stake_on_coldkey_hotkey_account( &coldkey, &hotkey, stake );
+        Self::create_account_if_non_existent( &coldkey, &key);         
+        ensure!( Self::coldkey_owns_key( &coldkey, &key ), Error::<T>::NonAssociatedColdKey );
+        Self::increase_stake_on_coldkey_key_account( &coldkey, &key, stake );
 
         let balance_to_be_added_as_balance = Self::u64_to_balance( balance );
         ensure!( balance_to_be_added_as_balance.is_some(), Error::<T>::CouldNotConvertToBalance );
@@ -42,7 +42,7 @@ impl<T: Config> Pallet<T> {
             subnetwork_uid = current_subnetwork_n;
 
             // --- 12.1.2 Expand subnetwork with new account.
-            Self::append_module( netuid, &hotkey, current_block_number );
+            Self::append_module( netuid, &key, current_block_number );
             log::info!("add new module account");
 
         } else {
@@ -51,12 +51,12 @@ impl<T: Config> Pallet<T> {
             subnetwork_uid = Self::get_module_to_prune( netuid );
 
             // --- 12.1.1 Replace the module account with the new info.
-            Self::replace_module( netuid, subnetwork_uid, &hotkey, current_block_number );
+            Self::replace_module( netuid, subnetwork_uid, &key, current_block_number );
             log::info!("prune module");
         }
     
-        log::info!("ModuleRegistered( netuid:{:?} uid:{:?} hotkey:{:?}  ) ", netuid, subnetwork_uid, hotkey );
-        Self::deposit_event( Event::ModuleRegistered( netuid, subnetwork_uid, hotkey ) );
+        log::info!("ModuleRegistered( netuid:{:?} uid:{:?} key:{:?}  ) ", netuid, subnetwork_uid, key );
+        Self::deposit_event( Event::ModuleRegistered( netuid, subnetwork_uid, key ) );
         Ok(())
     }
 
@@ -70,7 +70,7 @@ impl<T: Config> Pallet<T> {
     // 	* 'netuid' (u16):
     // 		- The u16 network identifier.
     // 
-    // 	* 'hotkey' ( T::AccountId ):
+    // 	* 'key' ( T::AccountId ):
     // 		- Hotkey to be registered to the network.
     //   
     // # Event:
@@ -85,17 +85,17 @@ impl<T: Config> Pallet<T> {
     // 		- This registration exceeds the total allowed on this network this block.
     //
     // 	* 'AlreadyRegistered':
-    // 		- The hotkey is already registered on this network.
+    // 		- The key is already registered on this network.
     //
     pub fn do_burned_registration( 
         origin: T::RuntimeOrigin,
         netuid: u16, 
-        hotkey: T::AccountId, 
+        key: T::AccountId, 
     ) -> DispatchResult {
 
         // --- 1. Check that the caller has signed the transaction. (the coldkey of the pairing)
         let coldkey = ensure_signed( origin )?; 
-        log::info!("do_registration( coldkey:{:?} netuid:{:?} hotkey:{:?} )", coldkey, netuid, hotkey );
+        log::info!("do_registration( coldkey:{:?} netuid:{:?} key:{:?} )", coldkey, netuid, key );
 
         // --- 2. Ensure the passed network is valid.
         ensure!( Self::if_subnet_exist( netuid ), Error::<T>::NetworkDoesNotExist ); 
@@ -104,10 +104,10 @@ impl<T: Config> Pallet<T> {
         ensure!( Self::get_registrations_this_block( netuid ) < Self::get_max_registrations_per_block( netuid ), Error::<T>::TooManyRegistrationsThisBlock );
 
         // --- 4. Ensure that the key is not already registered.
-        ensure!( !Uids::<T>::contains_key( netuid, &hotkey ), Error::<T>::AlreadyRegistered );
+        ensure!( !Uids::<T>::contains_key( netuid, &key ), Error::<T>::AlreadyRegistered );
 
         // --- 5. Ensure that the key passes the registration requirement
-        ensure!( Self::passes_network_connection_requirement( netuid, &hotkey ), Error::<T>::DidNotPassConnectedNetworkRequirement );
+        ensure!( Self::passes_network_connection_requirement( netuid, &key ), Error::<T>::DidNotPassConnectedNetworkRequirement );
     
         // --- 6. Ensure the callers coldkey has enough stake to perform the transaction.
         let current_block_number: u64 = Self::get_current_block_as_u64();
@@ -121,10 +121,10 @@ impl<T: Config> Pallet<T> {
         TotalIssuance::<T>::put( TotalIssuance::<T>::get().saturating_sub( Self::get_burn_as_u64( netuid ) ) );
 
         // --- 8. If the network account does not exist we will create it here.
-        Self::create_account_if_non_existent( &coldkey, &hotkey);         
+        Self::create_account_if_non_existent( &coldkey, &key);         
 
         // --- 9. Ensure that the pairing is correct.
-        ensure!( Self::coldkey_owns_hotkey( &coldkey, &hotkey ), Error::<T>::NonAssociatedColdKey );
+        ensure!( Self::coldkey_owns_key( &coldkey, &key ), Error::<T>::NonAssociatedColdKey );
 
         // --- 10. Append module or prune it.
         let subnetwork_uid: u16;
@@ -139,7 +139,7 @@ impl<T: Config> Pallet<T> {
             subnetwork_uid = current_subnetwork_n;
 
             // --- 11.1.2 Expand subnetwork with new account.
-            Self::append_module( netuid, &hotkey, current_block_number );
+            Self::append_module( netuid, &key, current_block_number );
             log::info!("add new module account");
         } else {
             // --- 12.1.1 Replacement required.
@@ -147,7 +147,7 @@ impl<T: Config> Pallet<T> {
             subnetwork_uid = Self::get_module_to_prune( netuid );
 
             // --- 12.1.1 Replace the module account with the new info.
-            Self::replace_module( netuid, subnetwork_uid, &hotkey, current_block_number );
+            Self::replace_module( netuid, subnetwork_uid, &key, current_block_number );
             log::info!("prune module");
         }
 
@@ -157,8 +157,8 @@ impl<T: Config> Pallet<T> {
         RegistrationsThisBlock::<T>::mutate( netuid, |val| *val += 1 );
     
         // --- 14. Deposit successful event.
-        log::info!("ModuleRegistered( netuid:{:?} uid:{:?} hotkey:{:?}  ) ", netuid, subnetwork_uid, hotkey );
-        Self::deposit_event( Event::ModuleRegistered( netuid, subnetwork_uid, hotkey ) );
+        log::info!("ModuleRegistered( netuid:{:?} uid:{:?} key:{:?}  ) ", netuid, subnetwork_uid, key );
+        Self::deposit_event( Event::ModuleRegistered( netuid, subnetwork_uid, key ) );
 
         // --- 15. Ok and done.
         Ok(())
@@ -168,7 +168,7 @@ impl<T: Config> Pallet<T> {
     //
     // # Args:
     // 	* 'origin': (<T as frame_system::Config>RuntimeOrigin):
-    // 		- The signature of the calling hotkey.
+    // 		- The signature of the calling key.
     //
     // 	* 'netuid' (u16):
     // 		- The u16 network identifier.
@@ -182,7 +182,7 @@ impl<T: Config> Pallet<T> {
     // 	* 'work' ( Vec<u8> ):
     // 		- Vector encoded bytes representing work done.
     //
-    // 	* 'hotkey' ( T::AccountId ):
+    // 	* 'key' ( T::AccountId ):
     // 		- Hotkey to be registered to the network.
     //
     // 	* 'coldkey' ( T::AccountId ):
@@ -200,7 +200,7 @@ impl<T: Config> Pallet<T> {
     // 		- This registration exceeds the total allowed on this network this block.
     //
     // 	* 'AlreadyRegistered':
-    // 		- The hotkey is already registered on this network.
+    // 		- The key is already registered on this network.
     //
     // 	* 'InvalidWorkBlock':
     // 		- The work has been performed on a stale, future, or non existent block.
@@ -208,26 +208,19 @@ impl<T: Config> Pallet<T> {
     // 	* 'WorkRepeated':
     // 		- This work for block has already been used.
     //
-    // 	* 'InvalidDifficulty':
-    // 		- The work does not match the difficutly.
-    //
+
     // 	* 'InvalidSeal':
     // 		- The seal is incorrect.
     //
     pub fn do_registration( 
         origin: T::RuntimeOrigin,
         netuid: u16, 
-        block_number: u64, 
-        nonce: u64, 
-        work: Vec<u8>,
-        hotkey: T::AccountId, 
-        coldkey: T::AccountId 
     ) -> DispatchResult {
 
         // --- 1. Check that the caller has signed the transaction. 
-        // TODO( const ): This not be the hotkey signature or else an exterior actor can register the hotkey and potentially control it?
+        // TODO( const ): This not be the key signature or else an exterior actor can register the key and potentially control it?
         let signing_origin = ensure_signed( origin )?;        
-        log::info!("do_registration( origin:{:?} netuid:{:?} hotkey:{:?}, coldkey:{:?} )", signing_origin, netuid, hotkey, coldkey );
+        log::info!("do_registration( origin:{:?} netuid:{:?} key:{:?}, coldkey:{:?} )", signing_origin, netuid, key, coldkey );
 
         // --- 2. Ensure the passed network is valid.
         ensure!( Self::if_subnet_exist( netuid ), Error::<T>::NetworkDoesNotExist ); 
@@ -236,35 +229,15 @@ impl<T: Config> Pallet<T> {
         ensure!( Self::get_registrations_this_block( netuid ) < Self::get_max_registrations_per_block( netuid ), Error::<T>::TooManyRegistrationsThisBlock );
 
         // --- 4. Ensure that the key is not already registered.
-        ensure!( !Uids::<T>::contains_key( netuid, &hotkey ), Error::<T>::AlreadyRegistered );
-
-        // --- 5. Ensure the passed block number is valid, not in the future or too old.
-        // Work must have been done within 3 blocks (stops long range attacks).
-        let current_block_number: u64 = Self::get_current_block_as_u64();
-        ensure! (block_number <= current_block_number, Error::<T>::InvalidWorkBlock);
-        ensure! (current_block_number - block_number < 3, Error::<T>::InvalidWorkBlock ); 
-
-        // --- 6. Ensure the passed work has not already been used.
-        ensure!( !UsedWork::<T>::contains_key( &work.clone() ), Error::<T>::WorkRepeated ); 
-
-        // --- 7. Ensure the supplied work passes the difficulty.
-        let difficulty: U256 = Self::get_difficulty( netuid );
-        let work_hash: H256 = Self::vec_to_hash( work.clone() );
-        ensure! ( Self::hash_meets_difficulty( &work_hash, difficulty ), Error::<T>::InvalidDifficulty ); // Check that the work meets difficulty.
-        
-        // --- 8. Check Work is the product of the nonce and the block number. Add this as used work.
-        let seal: H256 = Self::create_seal_hash( block_number, nonce );
-        ensure! ( seal == work_hash, Error::<T>::InvalidSeal );
-        UsedWork::<T>::insert( &work.clone(), current_block_number );
+        ensure!( !Uids::<T>::contains_key( netuid, &key ), Error::<T>::AlreadyRegistered );
 
         // --- 9. Ensure that the key passes the registration requirement
-        ensure!( Self::passes_network_connection_requirement( netuid, &hotkey ), Error::<T>::DidNotPassConnectedNetworkRequirement );
+        ensure!( Self::passes_network_connection_requirement( netuid, &key ), Error::<T>::DidNotPassConnectedNetworkRequirement );
 
         // --- 10. If the network account does not exist we will create it here.
-        Self::create_account_if_non_existent( &coldkey, &hotkey);         
+        Self::create_account_if_non_existent( &coldkey, &key);         
 
         // --- 11. Ensure that the pairing is correct.
-        ensure!( Self::coldkey_owns_hotkey( &coldkey, &hotkey ), Error::<T>::NonAssociatedColdKey );
 
         // --- 12. Append module or prune it.
         let subnetwork_uid: u16;
@@ -280,7 +253,7 @@ impl<T: Config> Pallet<T> {
             subnetwork_uid = current_subnetwork_n;
 
             // --- 12.1.2 Expand subnetwork with new account.
-            Self::append_module( netuid, &hotkey, current_block_number );
+            Self::append_module( netuid, &key, current_block_number );
             log::info!("add new module account");
         } else {
             // --- 12.1.1 Replacement required.
@@ -288,26 +261,25 @@ impl<T: Config> Pallet<T> {
             subnetwork_uid = Self::get_module_to_prune( netuid );
 
             // --- 12.1.1 Replace the module account with the new info.
-            Self::replace_module( netuid, subnetwork_uid, &hotkey, current_block_number );
+            Self::replace_module( netuid, subnetwork_uid, &key, current_block_number );
             log::info!("prune module");
         }
 
         // --- 14. Record the registration and increment block and interval counters.
-        POWRegistrationsThisInterval::<T>::mutate( netuid, |val| *val += 1 );
         RegistrationsThisInterval::<T>::mutate( netuid, |val| *val += 1 );
         RegistrationsThisBlock::<T>::mutate( netuid, |val| *val += 1 );
     
         // --- 15. Deposit successful event.
-        log::info!("ModuleRegistered( netuid:{:?} uid:{:?} hotkey:{:?}  ) ", netuid, subnetwork_uid, hotkey );
-        Self::deposit_event( Event::ModuleRegistered( netuid, subnetwork_uid, hotkey ) );
+        log::info!("ModuleRegistered( netuid:{:?} uid:{:?} key:{:?}  ) ", netuid, subnetwork_uid, key );
+        Self::deposit_event( Event::ModuleRegistered( netuid, subnetwork_uid, key ) );
 
         // --- 16. Ok and done.
         Ok(())
     }
 
-    // --- Checks if the hotkey passes the topk prunning requirement in all connected networks.
+    // --- Checks if the key passes the topk prunning requirement in all connected networks.
     //
-    pub fn passes_network_connection_requirement( netuid_a: u16, hotkey: &T::AccountId ) -> bool {
+    pub fn passes_network_connection_requirement( netuid_a: u16, key: &T::AccountId ) -> bool {
         // --- 1. We are iterating over all networks to see if there is a registration connection.
         for (netuid_b, exists) in NetworksAdded::<T>::iter() {
 
@@ -319,10 +291,10 @@ impl<T: Config> Pallet<T> {
                 let subnet_n: u16 = Self::get_subnetwork_n( netuid_b );
                 if subnet_n == 0 { return false; }
 
-                // --- 4. First check to see if this hotkey is already registered on this network.
+                // --- 4. First check to see if this key is already registered on this network.
                 // If we are not registered we trivially fail the requirement.
-                if !Self::is_hotkey_registered_on_network( netuid_b, hotkey ) { return false; }
-                let uid_b: u16 = Self::get_uid_for_net_and_hotkey( netuid_b, hotkey ).unwrap();
+                if !Self::is_key_registered_on_network( netuid_b, key ) { return false; }
+                let uid_b: u16 = Self::get_uid_for_net_and_key( netuid_b, key ).unwrap();
 
                 // --- 5. Next, count how many keys on the connected network have a better prunning score than
                 // our target network.
@@ -341,7 +313,6 @@ impl<T: Config> Pallet<T> {
             }
         }
         // --- 7. If we pass all the active registration requirments we return true allowing the registration to 
-        // continue to the normal difficulty check.s
         return true;
     }
 
@@ -405,27 +376,7 @@ impl<T: Config> Pallet<T> {
         }
     } 
 
-    // Determine whether the given hash satisfies the given difficulty.
-    // The test is done by multiplying the two together. If the product
-    // overflows the bounds of U256, then the product (and thus the hash)
-    // was too high.
-    pub fn hash_meets_difficulty(hash: &H256, difficulty: U256) -> bool {
-        let bytes: &[u8] = &hash.as_bytes();
-        let num_hash: U256 = U256::from( bytes );
-        let (value, overflowed) = num_hash.overflowing_mul(difficulty);
 
-		log::trace!(
-			target: LOG_TARGET,
-			"Difficulty: hash: {:?}, hash_bytes: {:?}, hash_as_num: {:?}, difficulty: {:?}, value: {:?} overflowed: {:?}",
-			hash,
-			bytes,
-			num_hash,
-			difficulty,
-			value,
-			overflowed
-		);
-        !overflowed
-    }
 
     pub fn get_block_hash_from_u64 ( block_number: u64 ) -> H256 {
         let block_number: T::BlockNumber = TryInto::<T::BlockNumber>::try_into( block_number ).ok().expect("convert u64 to block number.");
@@ -489,7 +440,6 @@ impl<T: Config> Pallet<T> {
 
     // Helper function for creating nonce and work.
     pub fn create_work_for_block_number( netuid:u16, block_number: u64, start_nonce: u64 ) -> (u64, Vec<u8>) {
-        let difficulty: U256 = Self::get_difficulty(netuid);
         let mut nonce: u64 = start_nonce;
         let mut work: H256 = Self::create_seal_hash( block_number, nonce );
         while !Self::hash_meets_difficulty(&work, difficulty) {

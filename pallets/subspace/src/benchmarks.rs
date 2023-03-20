@@ -35,8 +35,8 @@ benchmarks! {
     let mut seed : u32 = 1;
     for uid in 0..n as u16 {
         let block_number: u64 = Subspace::<T>::get_current_block_as_u64();
-        let hotkey: T::AccountId = account("Alice", 0, seed);
-        Subspace::<T>::append_module( netuid, &hotkey, block_number );
+        let key: T::AccountId = account("Alice", 0, seed);
+        Subspace::<T>::append_module( netuid, &key, block_number );
         seed = seed + 1;
     }
 
@@ -63,10 +63,10 @@ benchmarks! {
     let mut emission: Vec<(T::AccountId, u64)> = vec![];
     for uid in 0..n as u16 {
         let block_number: u64 = Subspace::<T>::get_current_block_as_u64();
-        let hotkey: T::AccountId = account("Alice", 0, SEED);
-        Subspace::<T>::append_module( netuid, &hotkey, block_number );
+        let key: T::AccountId = account("Alice", 0, SEED);
+        Subspace::<T>::append_module( netuid, &key, block_number );
         SEED = SEED + 1;
-        emission.push( ( hotkey, 1 ) );
+        emission.push( ( key, 1 ) );
     }
     Subspace::<T>::sink_emission( netuid, emission );
  
@@ -92,10 +92,9 @@ benchmarks! {
     
     let mut seed : u32 = 1;
     let block_number: u64 = Subspace::<T>::get_current_block_as_u64();
-    let hotkey: T::AccountId = account("Alice", 0, seed);
-    let coldkey: T::AccountId = account("Test", 0, seed);
+    let key: T::AccountId = account("Alice", 0, seed);
         
-  }: register( RawOrigin::Signed( caller.clone() ), netuid, block_number, nonce, work, hotkey, coldkey )
+  }: register( RawOrigin::Signed( caller.clone() ), netuid, block_number, nonce, work, key )
 
  benchmark_epoch_with_weights { 
     let caller: T::AccountId = whitelisted_caller::<AccountIdOf<T>>(); 
@@ -135,17 +134,15 @@ benchmarks! {
       let start_nonce: u64 = (39420842u64 + 100u64*id as u64).into();
       let (nonce, work): (u64, Vec<u8>) = Subspace::<T>::create_work_for_block_number( id, block_number, start_nonce );
       
-        let hotkey: T::AccountId = account("Alice", 0, seed);
-        let coldkey: T::AccountId = account("Test", 0, seed);
+        let key: T::AccountId = account("Alice", 0, seed);
         seed = seed +1;
       
       
       let block_number: u64 = Subspace::<T>::get_current_block_as_u64();
       
-      assert_ok!( Subspace::<T>::do_registration(caller_origin.clone(), netuid.try_into().unwrap(), block_number, nonce, work, hotkey.clone(), coldkey )); 
+      assert_ok!( Subspace::<T>::do_registration(caller_origin.clone(), netuid.try_into().unwrap(), block_number, nonce, work, key.clone() )); 
 
-      let uid = Subspace::<T>::get_uid_for_net_and_hotkey(netuid, &hotkey.clone()).unwrap();
-      Subspace::<T>::set_validator_permit_for_uid(netuid, uid.clone(), true);
+      let uid = Subspace::<T>::get_uid_for_net_and_key(netuid, &key.clone()).unwrap();
       dests.push(id.clone());
       weights.push(id.clone());
     }
@@ -170,12 +167,11 @@ benchmarks! {
     let start_nonce: u64 = (39420842u64 + 100u64*netuid as u64).into();
     let (nonce, work): (u64, Vec<u8>) = Subspace::<T>::create_work_for_block_number( netuid, block_number, start_nonce );
     let mut seed : u32 = 1;
-    let coldkey: T::AccountId = account("Test", 0, seed);
-    let hotkey: T::AccountId = account("Alice", 0, seed);
+    let key: T::AccountId = account("Alice", 0, seed);
 
-    assert_ok!( Subspace::<T>::do_registration(caller_origin.clone(), netuid.try_into().unwrap(), block_number, nonce, work, hotkey.clone(), coldkey.clone() ));
+    assert_ok!( Subspace::<T>::do_registration(caller_origin.clone(), netuid.try_into().unwrap(), block_number, nonce, work, key.clone() ));
 
-  }: become_delegate(RawOrigin::Signed( coldkey.clone() ), hotkey.clone())
+  }: become_delegate(RawOrigin::Signed( coldkey.clone() ), key.clone())
 
 
   benchmark_add_stake {
@@ -195,16 +191,16 @@ benchmarks! {
     let (nonce, work): (u64, Vec<u8>) = Subspace::<T>::create_work_for_block_number( netuid, block_number, start_nonce );
     let mut seed : u32 = 1;
     let coldkey: T::AccountId = account("Test", 0, seed);
-    let hotkey: T::AccountId = account("Alice", 0, seed);
+    let key: T::AccountId = account("Alice", 0, seed);
 
-    assert_ok!( Subspace::<T>::do_registration(caller_origin.clone(), netuid.try_into().unwrap(), block_number, nonce, work, hotkey.clone(), coldkey.clone() ));
+    assert_ok!( Subspace::<T>::do_registration(caller_origin.clone(), netuid.try_into().unwrap(), block_number, nonce, work, key.clone(), coldkey.clone() ));
 
     let amount: u64 = 1;
     let amoun_to_be_staked = Subspace::<T>::u64_to_balance( 1000000000);
 
     Subspace::<T>::add_balance_to_coldkey_account(&coldkey.clone(), amoun_to_be_staked.unwrap());
 
-  }: add_stake(RawOrigin::Signed( coldkey.clone() ), hotkey, amount)
+  }: add_stake(RawOrigin::Signed( coldkey.clone() ), key, amount)
 
   benchmark_remove_stake{
     let caller: T::AccountId = whitelisted_caller::<AccountIdOf<T>>(); 
@@ -223,20 +219,20 @@ benchmarks! {
     let (nonce, work): (u64, Vec<u8>) = Subspace::<T>::create_work_for_block_number( netuid, block_number, start_nonce );
     let mut seed : u32 = 1;
     let coldkey: T::AccountId = account("Test", 0, seed);
-    let hotkey: T::AccountId = account("Alice", 0, seed);
+    let key: T::AccountId = account("Alice", 0, seed);
 
-    assert_ok!( Subspace::<T>::do_registration(caller_origin.clone(), netuid.try_into().unwrap(), block_number, nonce, work, hotkey.clone(), coldkey.clone() ));
+    assert_ok!( Subspace::<T>::do_registration(caller_origin.clone(), netuid.try_into().unwrap(), block_number, nonce, work, key.clone(), coldkey.clone() ));
 
     let amoun_to_be_staked = Subspace::<T>::u64_to_balance( 1000000000);
     Subspace::<T>::add_balance_to_coldkey_account(&coldkey.clone(), amoun_to_be_staked.unwrap());
 
-    assert_ok!( Subspace::<T>::add_stake(RawOrigin::Signed( coldkey.clone() ).into() , hotkey.clone(), 1000));
+    assert_ok!( Subspace::<T>::add_stake(RawOrigin::Signed( coldkey.clone() ).into() , key.clone(), 1000));
 
     let amount_unstaked: u64 = 1;
 
-  }: remove_stake(RawOrigin::Signed( coldkey.clone() ), hotkey.clone(), amount_unstaked)
+  }: remove_stake(RawOrigin::Signed( coldkey.clone() ), key.clone(), amount_unstaked)
 
-  benchmark_serve_axon{
+  benchmark_serve_module{
     let caller: T::AccountId = whitelisted_caller::<AccountIdOf<T>>(); 
     let caller_origin = <T as frame_system::Config>::RuntimeOrigin::from(RawOrigin::Signed(caller.clone()));
     let netuid: u16 = 1;
@@ -250,7 +246,7 @@ benchmarks! {
 
     Subspace::<T>::set_serving_rate_limit(netuid, 0);
 
-  }: serve_axon(RawOrigin::Signed( caller.clone() ), netuid, version, ip, port, ip_type, protocol, placeholder1, placeholder2)
+  }: serve_module(RawOrigin::Signed( caller.clone() ), netuid, version, ip, port, ip_type, protocol, placeholder1, placeholder2)
 
   benchmark_serve_prometheus {
     let caller: T::AccountId = whitelisted_caller::<AccountIdOf<T>>(); 
@@ -281,13 +277,13 @@ benchmarks! {
 
     let mut seed : u32 = 1;
     let block_number: u64 = Subspace::<T>::get_current_block_as_u64();
-    let hotkey: T::AccountId = account("Alice", 0, seed);
+    let key: T::AccountId = account("Alice", 0, seed);
     let coldkey: T::AccountId = account("Test", 0, seed);
 
     let amoun_to_be_staked = Subspace::<T>::u64_to_balance( balance );
     Subspace::<T>::add_balance_to_coldkey_account(&coldkey.clone(), amoun_to_be_staked.unwrap());
 
-  }: sudo_register(RawOrigin::<AccountIdOf<T>>::Root, netuid, hotkey, coldkey, stake, balance)
+  }: sudo_register(RawOrigin::<AccountIdOf<T>>::Root, netuid, key, coldkey, stake, balance)
 
   benchmark_sudo_add_network {
     let netuid: u16 = 1;
@@ -405,15 +401,6 @@ benchmarks! {
 
   }: sudo_set_max_allowed_validators(RawOrigin::<AccountIdOf<T>>::Root, netuid, max_allowed_validators)
 
-  benchmark_sudo_set_difficulty {
-    let netuid: u16 = 1;
-    let tempo: u16 = 1;
-    let modality: u16 = 0;
-    let difficulty: u64 = 1200000;
-
-    assert_ok!( Subspace::<T>::do_add_network( RawOrigin::Root.into(), netuid.try_into().unwrap(), tempo.into(), modality.into()));
-
-  }: sudo_set_difficulty(RawOrigin::<AccountIdOf<T>>::Root, netuid, difficulty)
 
   benchmark_sudo_set_adjustment_interval {
     let netuid: u16 = 1;
@@ -485,85 +472,6 @@ benchmarks! {
 
   }: sudo_set_min_allowed_weights(RawOrigin::<AccountIdOf<T>>::Root, netuid, min_allowed_weights)
 
-  benchmark_sudo_set_validator_batch_size{
-    let netuid: u16 = 1;
-    let tempo: u16 = 1;
-    let modality: u16 = 0;
-    let validator_batch_size: u16 = 10;
-
-    assert_ok!( Subspace::<T>::do_add_network( RawOrigin::Root.into(), netuid.try_into().unwrap(), tempo.into(), modality.into()));
-
-  }: sudo_set_validator_batch_size(RawOrigin::<AccountIdOf<T>>::Root, netuid, validator_batch_size)
-
-  benchmark_sudo_set_validator_sequence_length{
-    let netuid: u16 = 1;
-    let tempo: u16 = 1;
-    let modality: u16 = 0;
-    let validator_sequence_length: u16 = 10;
-
-    assert_ok!( Subspace::<T>::do_add_network( RawOrigin::Root.into(), netuid.try_into().unwrap(), tempo.into(), modality.into()));
-
-  }: sudo_set_validator_sequence_length(RawOrigin::<AccountIdOf<T>>::Root, netuid, validator_sequence_length)
-
-  benchmark_sudo_set_validator_epochs_per_reset {
-    let netuid: u16 = 1;
-    let tempo: u16 = 1;
-    let modality: u16 = 0;
-    let validator_epochs_per_reset: u16 = 10;
-
-    assert_ok!( Subspace::<T>::do_add_network( RawOrigin::Root.into(), netuid.try_into().unwrap(), tempo.into(), modality.into()));
-
-  }: sudo_set_validator_epochs_per_reset(RawOrigin::<AccountIdOf<T>>::Root, netuid, validator_epochs_per_reset)
-
-  benchmark_sudo_set_validator_exclude_quantile {
-    let netuid: u16 = 1;
-    let tempo: u16 = 1;
-    let modality: u16 = 0;
-    let validator_exclude_quantile: u16 = 10;
-
-    assert_ok!( Subspace::<T>::do_add_network( RawOrigin::Root.into(), netuid.try_into().unwrap(), tempo.into(), modality.into()));
-
-  }: sudo_set_validator_exclude_quantile(RawOrigin::<AccountIdOf<T>>::Root, netuid, validator_exclude_quantile)
-
-  benchmark_sudo_set_validator_prune_len {
-    let netuid: u16 = 1;
-    let tempo: u16 = 1;
-    let modality: u16 = 0;
-    let validator_prune_len: u64 = 10;
-
-    assert_ok!( Subspace::<T>::do_add_network( RawOrigin::Root.into(), netuid.try_into().unwrap(), tempo.into(), modality.into()));
-
-  }: sudo_set_validator_prune_len(RawOrigin::<AccountIdOf<T>>::Root, netuid, validator_prune_len)
-
-  benchmark_sudo_set_validator_logits_divergence {
-    let netuid: u16 = 1;
-    let tempo: u16 = 1;
-    let modality: u16 = 0;
-    let validator_logits_divergence: u16 = 100;
-
-    assert_ok!( Subspace::<T>::do_add_network( RawOrigin::Root.into(), netuid.try_into().unwrap(), tempo.into(), modality.into()));
-
-  }: sudo_set_validator_logits_divergence(RawOrigin::<AccountIdOf<T>>::Root, netuid, validator_logits_divergence)
-
-  benchmark_sudo_set_scaling_law_power {
-    let netuid: u16 = 1;
-    let tempo: u16 = 1;
-    let modality: u16 = 0;
-    let scaling_law_power: u16 = 100;
-
-    assert_ok!( Subspace::<T>::do_add_network( RawOrigin::Root.into(), netuid.try_into().unwrap(), tempo.into(), modality.into()));
-
-  }: sudo_set_scaling_law_power(RawOrigin::<AccountIdOf<T>>::Root, netuid, scaling_law_power)
-
-  benchmark_sudo_set_synergy_scaling_law_power {
-    let netuid: u16 = 1;
-    let tempo: u16 = 1;
-    let modality: u16 = 0;
-    let synergy_scaling_law_power: u16 = 100;
-
-    assert_ok!( Subspace::<T>::do_add_network( RawOrigin::Root.into(), netuid.try_into().unwrap(), tempo.into(), modality.into()));
-
-  }: sudo_set_synergy_scaling_law_power(RawOrigin::<AccountIdOf<T>>::Root, netuid, synergy_scaling_law_power)
 
   benchmark_sudo_set_immunity_period {
     let netuid: u16 = 1;
@@ -598,7 +506,7 @@ benchmarks! {
   benchmark_burned_register {
     let netuid: u16 = 1;
     let mut seed : u32 = 1;
-    let hotkey: T::AccountId = account("Alice", 0, seed);
+    let key: T::AccountId = account("Alice", 0, seed);
     let coldkey: T::AccountId = account("Test", 0, seed);
     let modality: u16 = 0;
     let tempo: u16 = 1;
@@ -607,17 +515,7 @@ benchmarks! {
     let amoun_to_be_staked = Subspace::<T>::u64_to_balance( 1000000);
     Subspace::<T>::add_balance_to_coldkey_account(&coldkey.clone(), amoun_to_be_staked.unwrap());
 
-  }: burned_register(RawOrigin::Signed( coldkey.clone() ), netuid, hotkey)
-
-  benchmark_sudo_set_validator_epoch_length {
-    let netuid: u16 = 1;
-    let tempo: u16 = 1;
-    let modality: u16 = 0;
-    let validator_epoch_len: u16 = 10;
-
-    assert_ok!( Subspace::<T>::do_add_network( RawOrigin::Root.into(), netuid.try_into().unwrap(), tempo.into(), modality.into()));
-
-  }: sudo_set_validator_epoch_len(RawOrigin::<AccountIdOf<T>>::Root, netuid, validator_epoch_len)
+  }: burned_register(RawOrigin::Signed( coldkey.clone() ), netuid, key)
 
   benchmark_sudo_set_burn {
     let netuid: u16 = 1;

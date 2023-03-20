@@ -16,7 +16,6 @@ pub struct DelegateInfo<T: Config> {
     nominators: Vec<(T::AccountId, Compact<u64>)>, // map of nominator_ss58 to stake amount
     owner_ss58: T::AccountId,
     registrations: Vec<Compact<u16>>, // Vec of netuid this delegate is registered on
-    validator_permits: Vec<Compact<u16>>, // Vec of netuid this delegate has validator permit on
     return_per_1000: Compact<u64>, // Delegators current daily return per 1000 TAO staked minus take fee
     total_daily_return: Compact<u64>, // Delegators current daily return
 }
@@ -29,21 +28,15 @@ impl<T: Config> Pallet<T> {
             nominators.push( ( nominator.clone(), stake.into() ) );
         }
 
-        let registrations = Self::get_registered_networks_for_hotkey( &delegate.clone() );
-        let mut validator_permits = Vec::<Compact<u16>>::new();
+        let registrations = Self::get_registered_networks_for_key( &delegate.clone() );
         let mut emissions_per_day: U64F64 = U64F64::from_num(0);
         
         for netuid in registrations.iter() {
-            let _uid = Self::get_uid_for_net_and_hotkey( *netuid, &delegate.clone());
+            let _uid = Self::get_uid_for_net_and_key( *netuid, &delegate.clone());
             if !_uid.is_ok() {
                 continue; // this should never happen
             } else {
                 let uid = _uid.expect("Delegate's UID should be ok");
-                let validator_permit = Self::get_validator_permit_for_uid( *netuid, uid );
-                if validator_permit {
-                    validator_permits.push( (*netuid).into() );
-                }
-                
                 let emission: U64F64 = Self::get_emission_for_uid( *netuid, uid).into();
                 let tempo: U64F64 = Self::get_tempo( *netuid ).into();
                 let epochs_per_day: U64F64 = U64F64::from_num(7200) / tempo;
@@ -51,10 +44,10 @@ impl<T: Config> Pallet<T> {
             }
         }
 
-        let owner = Self::get_owning_coldkey_for_hotkey( &delegate.clone() );
+        let owner = Self::get_owning_coldkey_for_key( &delegate.clone() );
         let take: Compact<u16> = <Delegates<T>>::get( delegate.clone() ).into();
 
-        let total_stake: U64F64 = Self::get_total_stake_for_hotkey( &delegate.clone() ).into();
+        let total_stake: U64F64 = Self::get_total_stake_for_key( &delegate.clone() ).into();
         
         let return_per_1000: U64F64 = ( emissions_per_day *  U64F64::from_num(0.82)) / (total_stake /  U64F64::from_num(1000));
         
@@ -64,7 +57,6 @@ impl<T: Config> Pallet<T> {
             nominators,
             owner_ss58: owner.clone(),
             registrations: registrations.iter().map(|x| x.into()).collect(),
-            validator_permits,
             return_per_1000: U64F64::to_num::<u64>(return_per_1000).into(),
             total_daily_return: U64F64::to_num::<u64>(emissions_per_day).into(),
         };
@@ -106,7 +98,7 @@ impl<T: Config> Pallet<T> {
 
         let mut delegates: Vec<(DelegateInfo<T>, Compact<u64>)> = Vec::new();
         for delegate in < Delegates<T> as IterableStorageMap<T::AccountId, u16> >::iter_keys().into_iter() {
-            let staked_to_this_delegatee = Self::get_stake_for_coldkey_and_hotkey( &delegatee.clone(), &delegate.clone() );
+            let staked_to_this_delegatee = Self::get_stake_for_coldkey_and_key( &delegatee.clone(), &delegate.clone() );
             if staked_to_this_delegatee == 0 {
                 continue; // No stake to this delegate
             }

@@ -9,7 +9,7 @@ impl<T: Config> Pallet<T> {
     //
     // # Args:
     // 	* 'origin': (<T as frame_system::Config>RuntimeOrigin):
-    // 		- The signature of the calling hotkey.
+    // 		- The signature of the calling key.
     //
     // 	* 'netuid' (u16):
     // 		- The u16 network identifier.
@@ -40,9 +40,6 @@ impl<T: Config> Pallet<T> {
     // 	* 'SettingWeightsTooFast':
     // 		- Attempting to set weights faster than the weights_set_rate_limit.
     //
-    // 	* 'NoValidatorPermit':
-    // 		- Attempting to set non-self weights without a validator permit.
-    //
     // 	* 'WeightVecNotEqualSize':
     // 		- Attempting to set weights with uids not of same length.
     //
@@ -63,9 +60,9 @@ impl<T: Config> Pallet<T> {
     //
     pub fn do_set_weights( origin: T::RuntimeOrigin, netuid: u16, uids: Vec<u16>, values: Vec<u16>, version_key:u64 ) -> dispatch::DispatchResult{
 
-        // --- 1. Check the caller's signature. This is the hotkey of a registered account.
-        let hotkey = ensure_signed( origin )?;
-        log::info!("do_set_weights( origin:{:?} netuid:{:?}, uids:{:?}, values:{:?})", hotkey, netuid, uids, values );
+        // --- 1. Check the caller's signature. This is the key of a registered account.
+        let key = ensure_signed( origin )?;
+        log::info!("do_set_weights( origin:{:?} netuid:{:?}, uids:{:?}, values:{:?})", key, netuid, uids, values );
 
         // --- 2. Check that the length of uid list and value list are equal for this network.
         ensure!( Self::uids_match_values( &uids, &values ), Error::<T>::WeightVecNotEqualSize );
@@ -76,22 +73,19 @@ impl<T: Config> Pallet<T> {
         // --- 4. Check to see if the number of uids is within the max allowed uids for this network.
         ensure!( Self::check_len_uids_within_allowed( netuid, &uids ), Error::<T>::TooManyUids);
 
-        // --- 5. Check to see if the hotkey is registered to the passed network.
-        ensure!( Self::is_hotkey_registered_on_network( netuid, &hotkey ), Error::<T>::NotRegistered );
+        // --- 5. Check to see if the key is registered to the passed network.
+        ensure!( Self::is_key_registered_on_network( netuid, &key ), Error::<T>::NotRegistered );
 
         // --- 6. Ensure version_key is up-to-date.
         ensure!( Self::check_version_key( netuid, version_key ), Error::<T>::IncorrectNetworkVersionKey );
 
-        // --- 7. Get the module uid of associated hotkey on network netuid.
+        // --- 7. Get the module uid of associated key on network netuid.
         let module_uid;
-        match Self::get_uid_for_net_and_hotkey( netuid, &hotkey ) { Ok(k) => module_uid = k, Err(e) => panic!("Error: {:?}", e) } 
+        match Self::get_uid_for_net_and_key( netuid, &key ) { Ok(k) => module_uid = k, Err(e) => panic!("Error: {:?}", e) } 
 
         // --- 8. Ensure the uid is not setting weights faster than the weights_set_rate_limit.
         let current_block: u64 = Self::get_current_block_as_u64();
         ensure!( Self::check_rate_limit( netuid, module_uid, current_block ), Error::<T>::SettingWeightsTooFast );
-
-        // --- 9. Check that the module uid is an allowed validator permitted to set non-self weights.
-        ensure!( Self::check_validator_permit( netuid, module_uid, &uids, &values ), Error::<T>::NoValidatorPermit );
 
         // --- 10. Ensure the passed uids contain no duplicates.
         ensure!( !Self::has_duplicate_uids( &uids ), Error::<T>::DuplicateUids );
@@ -176,15 +170,6 @@ impl<T: Config> Pallet<T> {
         return false;
     }
 
-    // Returns True if setting self-weight or has validator permit.
-    pub fn check_validator_permit( netuid: u16, uid: u16, uids: &Vec<u16>, weights: &Vec<u16> ) -> bool {
-        // Check self weight. Allowed to set single value for self weight.
-        if Self::is_self_weight(uid, uids, weights) {
-            return true;
-        }
-        // Check if uid has validator permit.
-        Self::get_validator_permit_for_uid( netuid, uid )
-    }
 
     // Returns True if the uids and weights are have a valid length for uid on network.
     pub fn check_length( netuid: u16, uid: u16, uids: &Vec<u16>, weights: &Vec<u16> ) -> bool {
