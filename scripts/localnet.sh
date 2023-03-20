@@ -13,17 +13,17 @@ if [[ $BUILD_BINARY == "1" ]]; then
 fi
 
 echo "*** Building chainspec..."
-./target/release/node-subtensor build-spec --disable-default-bootnode --raw --chain $CHAIN > $FULL_PATH
+./target/release/node-subspace build-spec --disable-default-bootnode --raw --chain $CHAIN > $FULL_PATH
 echo "*** Chainspec built and output to file"
 
 echo "*** Purging previous state..."
-./target/release/node-subtensor purge-chain -y --base-path /tmp/bob --chain="$FULL_PATH" >/dev/null 2>&1
-./target/release/node-subtensor purge-chain -y --base-path /tmp/alice --chain="$FULL_PATH" >/dev/null 2>&1
+./target/release/node-subspace purge-chain -y --base-path /tmp/bob --chain="$FULL_PATH" >/dev/null 2>&1
+./target/release/node-subspace purge-chain -y --base-path /tmp/alice --chain="$FULL_PATH" >/dev/null 2>&1
 echo "*** Previous chainstate purged"
 
 echo "*** Starting localnet nodes..."
 alice_start=(
-	./target/release/node-subtensor
+	./target/release/node-subspace
 	--base-path /tmp/alice
 	--chain="$FULL_PATH"
 	--alice
@@ -36,7 +36,7 @@ alice_start=(
 )
 
 bob_start=(
-	./target/release/node-subtensor
+	./target/release/node-subspace
 	--base-path /tmp/bob
 	--chain="$FULL_PATH"
 	--bob

@@ -1,6 +1,6 @@
-use node_subtensor_runtime::{
+use node_subspace_runtime::{
 	AccountId, AuraConfig, BalancesConfig, GenesisConfig, GrandpaConfig, Signature, SudoConfig,
-	SystemConfig, WASM_BINARY, SubtensorModuleConfig
+	SystemConfig, WASM_BINARY, SubspaceModuleConfig
 };
 use sc_service::ChainType;
 use sp_consensus_aura::sr25519::AuthorityId as AuraId;
@@ -152,7 +152,7 @@ struct ColdkeyHotkeys {
 	balances: std::collections::HashMap<String, u64>
 }
 
-pub fn finney_config() -> Result<ChainSpec, String> {
+pub fn newton_config() -> Result<ChainSpec, String> {
 	let path: PathBuf = std::path::PathBuf::from("./snapshot.json");
 	let wasm_binary = WASM_BINARY.ok_or_else(|| "Development wasm not available".to_string())?;
 
@@ -201,18 +201,18 @@ pub fn finney_config() -> Result<ChainSpec, String> {
 
 	// Give front-ends necessary data to present to users
 	let mut properties = sc_service::Properties::new();
-	properties.insert("tokenSymbol".into(), "TAO".into());
+	properties.insert("tokenSymbol".into(), "TOK".into());
 	properties.insert("tokenDecimals".into(), 9.into());
 	properties.insert("ss58Format".into(), 13116.into());
 
 	Ok(ChainSpec::from_genesis(
 		// Name
-		"Bittensor",
+		"Commune",
 		// ID
-		"bittensor",
+		"commune",
 		ChainType::Development,
 		move || {
-			finney_genesis(
+			newton_genesis(
 				wasm_binary,
 				// Initial PoA authorities (Validators)
 				// aura | grandpa
@@ -258,7 +258,7 @@ pub fn finney_config() -> Result<ChainSpec, String> {
 		// Telemetry
 		None,
 		// Protocol ID
-		Some("bittensor"),
+		Some("commune"),
 		None,
 		// Properties
 		None,
@@ -295,12 +295,12 @@ fn testnet_genesis(
 			key: Some(root_key),
 		},
 		transaction_payment: Default::default(),
-		subtensor_module: Default::default(),
+		subspace_module: Default::default(),
 	}
 }
 
 // Configure initial storage state for FRAME modules.
-fn finney_genesis(
+fn newton_genesis(
 	wasm_binary: &[u8],
 	initial_authorities: Vec<(AuraId, GrandpaId)>,
 	root_key: AccountId,
@@ -332,7 +332,7 @@ fn finney_genesis(
 			key: Some(root_key),
 		},
 		transaction_payment: Default::default(),
-		subtensor_module: SubtensorModuleConfig {
+		subspace_module: SubspaceModuleConfig {
 			stakes: stakes,
 			balances_issuance: balances_issuance
 		},

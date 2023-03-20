@@ -1,5 +1,5 @@
 [package]
-name = "node-subtensor-runtime"
+name = "node-subspace-runtime"
 version = "4.0.0-dev"
 description = "A fresh FRAME-based Substrate node, ready for hacking."
 authors = ["Substrate DevHub <https://github.com/substrate-developer-hub>"]
@@ -7,7 +7,7 @@ homepage = "https://substrate.io/"
 edition = "2021"
 license = "Unlicense"
 publish = false
-repository = "https://github.com/substrate-developer-hub/substrate-node-subtensor/"
+repository = "https://github.com/substrate-developer-hub/substrate-node-subspace/"
 
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu"]
@@ -16,8 +16,8 @@ targets = ["x86_64-unknown-linux-gnu"]
 opt-level = 3
 
 [dependencies]
-pallet-subtensor = { version = "4.0.0-dev", default-features = false, path = "../pallets/subtensor" }
-subtensor-custom-rpc-runtime-api = { version = "0.0.2", path = "../pallets/subtensor/runtime-api", default-features = false }
+pallet-subspace = { version = "4.0.0-dev", default-features = false, path = "../pallets/subspace" }
+subspace-custom-rpc-runtime-api = { version = "0.0.2", path = "../pallets/subspace/runtime-api", default-features = false }
 smallvec = "1.6.1"
 codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = ["derive"] }
 scale-info = { version = "2.1.1", default-features = false, features = ["derive"] }
@@ -46,7 +46,7 @@ sp-std = { version = "5.0.0", default-features = false, git = "https://github.co
 sp-transaction-pool = { version = "4.0.0-dev", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.39" }
 sp-version = { version = "5.0.0", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.39" }
 
-# Used for the node subtensor's RPCs
+# Used for the node subspace's RPCs
 frame-system-rpc-runtime-api = { version = "4.0.0-dev", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.39" }
 pallet-transaction-payment-rpc-runtime-api = { version = "4.0.0-dev", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.39" }
 
@@ -70,7 +70,7 @@ std = [
 	"frame-system-rpc-runtime-api/std",
 	"frame-system/std",
 	"frame-try-runtime/std",
-	"pallet-subtensor/std",
+	"pallet-subspace/std",
 	"pallet-aura/std",
 	"pallet-balances/std",
 	"pallet-grandpa/std",
@@ -101,7 +101,7 @@ runtime-benchmarks = [
 	"pallet-grandpa/runtime-benchmarks",
 	"pallet-timestamp/runtime-benchmarks",
 	"sp-runtime/runtime-benchmarks",
-	"pallet-subtensor/runtime-benchmarks",
+	"pallet-subspace/runtime-benchmarks",
 ]
 try-runtime = [
 	"frame-try-runtime/try-runtime",
@@ -115,5 +115,5 @@ try-runtime = [
 	"pallet-sudo/try-runtime",
 	"pallet-timestamp/try-runtime",
 	"pallet-transaction-payment/try-runtime",
-	"pallet-subtensor/try-runtime",
+	"pallet-subspace/try-runtime",
 ]

@@ -8,15 +8,15 @@
                                                                              
 ```
 
-# **Subtensor** <!-- omit in toc -->
-[![Discord Chat](https://img.shields.io/discord/308323056592486420.svg)](https://discord.gg/bittensor)
+# **Subspace** <!-- omit in toc -->
+[![Discord Chat](https://img.shields.io/discord/308323056592486420.svg)](https://discord.gg/commune)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT) 
 
 </div>
-This repository contains Bittensor's substrate-chain. Subtensor contains the trusted logic which:
+This repository contains Commune's substrate-chain. Subspace contains the trusted logic which:
 
-1. Runs Bittensor's consensus mechanism
-1. Advertises neuron information, IPs, etc
+1. Runs Commune's consensus mechanism
+1. Advertises module information, IPs, etc
 1. and facilitates value transfer via TAO.
 
 </div>
@@ -24,12 +24,12 @@ This repository contains Bittensor's substrate-chain. Subtensor contains the tru
 ## System Requirements
 
 * The binaries in ./bin/release are x86_64 binaries to be used with the Linux kernel.  
-* Subtensor needs ~286 MiB to run.                      
+* Subspace needs ~286 MiB to run.                      
 * Architectures other than x86_64 are currently not supported.
 * OSs other than Linux and MacOS are currently not supported.               
 
 ## Architectures
-Subtensor support the following architectures:
+Subspace support the following architectures:
 
 ## Linux x86_64
 Requirements:
@@ -42,12 +42,12 @@ Requirements:
 * MacOS 10.7+ (Lion+)
 
 ## Network requirements
-* Subtensor needs access to the public internet
-* Subtensor runs on ipv4
-* Subtensor listens on the following ports:
-1) 9944 - Websocket. This port is used by bittensor. It only accepts connections from localhost. Make sure this port is firewalled off from the public domain.
+* Subspace needs access to the public internet
+* Subspace runs on ipv4
+* Subspace listens on the following ports:
+1) 9944 - Websocket. This port is used by commune. It only accepts connections from localhost. Make sure this port is firewalled off from the public domain.
 2) 9933 - RPC. This port is opened, but not used.
-3) 30333 - p2p socket. This port accepts connections from other subtensor nodes. Make sure your firewall(s) allow incoming traffic to this port.
+3) 30333 - p2p socket. This port accepts connections from other subspace nodes. Make sure your firewall(s) allow incoming traffic to this port.
 * It is assumed your default outgoing traffic policy is ACCEPT. If not, make sure outbound traffic to port 30333 is allowed.
 
 </div>
@@ -78,7 +78,7 @@ Once the project has been built, the following command can be used to explore al
 subcommands:
 
 ```sh
-./target/release/subtensor -h
+./target/release/subspace -h
 ```
 
 ## Run
@@ -92,19 +92,19 @@ node.
 This command will start the single-node development chain with non-persistent state:
 
 ```bash
-./target/release/subtensor --dev
+./target/release/subspace --dev
 ```
 
 Purge the development chain's state:
 
 ```bash
-./target/release/subtensor purge-chain --dev
+./target/release/subspace purge-chain --dev
 ```
 
 Start the development chain with detailed logging:
 
 ```bash
-RUST_BACKTRACE=1 ./target/release/subtensor-ldebug --dev
+RUST_BACKTRACE=1 ./target/release/subspace-ldebug --dev
 ```
 
 Running debug with logs.

@@ -53,8 +53,8 @@ use pallet_transaction_payment::{ConstFeeMultiplier, CurrencyAdapter, Multiplier
 pub use sp_runtime::BuildStorage;
 pub use sp_runtime::{Perbill, Permill};
 
-// Subtensor module
-pub use pallet_subtensor;
+// Subspace module
+pub use pallet_subspace;
 
 // An index to a block.
 pub type BlockNumber = u32;
@@ -103,8 +103,8 @@ pub mod opaque {
 // https://docs.substrate.io/main-docs/build/upgrade#runtime-versioning
 #[sp_version::runtime_version]
 pub const VERSION: RuntimeVersion = RuntimeVersion {
-	spec_name: create_runtime_str!("node-subtensor"),
-	impl_name: create_runtime_str!("node-subtensor"),
+	spec_name: create_runtime_str!("node-subspace"),
+	impl_name: create_runtime_str!("node-subspace"),
 	authoring_version: 1,
 	// The version of the runtime specification. A full node will not attempt to use its native
 	//   runtime in substitute for the on-chain Wasm runtime unless all of `spec_name`,
@@ -313,83 +313,83 @@ impl pallet_sudo::Config for Runtime {
 	type RuntimeCall = RuntimeCall;
 }
 
-// Configure the pallet subtensor.
+// Configure the pallet subspace.
 parameter_types! {
-	pub const SubtensorInitialRho: u16 = 10;
-    pub const SubtensorInitialKappa: u16 = 32_767; // 0.5 = 65535/2 
-    pub const SubtensorInitialMaxAllowedUids: u16 = 4096;
-    pub const SubtensorInitialIssuance: u64 = 0;
-    pub const SubtensorInitialMinAllowedWeights: u16 = 1024;
-    pub const SubtensorInitialEmissionValue: u16 = 0;
-    pub const SubtensorInitialMaxWeightsLimit: u16 = 1000; // 1000/2^16 = 0.015
-    pub const SubtensorInitialValidatorBatchSize: u16 = 32; // 32
-    pub const SubtensorInitialValidatorSequenceLen: u16 = 256; // 256
-    pub const SubtensorInitialValidatorEpochLen: u16 = 100;
-    pub const SubtensorInitialValidatorEpochsPerReset: u16 = 60;
-    pub const SubtensorInitialValidatorExcludeQuantile: u16 = 6554; // 10% of u16
-    pub const SubtensorInitialValidatorPruneLen: u64 = 1;
-    pub const SubtensorInitialValidatorLogitsDivergence: u16 = 1310; // 2% of u16
-    pub const SubtensorInitialScalingLawPower: u16 = 50; // 0.5
-    pub const SubtensorInitialSynergyScalingLawPower: u16 = 50; // 0.5
-    pub const SubtensorInitialMaxAllowedValidators: u16 = 128;
-    pub const SubtensorInitialTempo: u16 = 99;
-    pub const SubtensorInitialDifficulty: u64 = 10_000_000;
-    pub const SubtensorInitialAdjustmentInterval: u16 = 100;
-    pub const SubtensorInitialTargetRegistrationsPerInterval: u16 = 2;
-    pub const SubtensorInitialImmunityPeriod: u16 = 4096;
-    pub const SubtensorInitialActivityCutoff: u16 = 5000;
-    pub const SubtensorInitialMaxRegistrationsPerBlock: u16 = 1;
-    pub const SubtensorInitialPruningScore : u16 = u16::MAX;
-    pub const SubtensorInitialBondsMovingAverage: u64 = 900_000;
-    pub const SubtensorInitialDefaultTake: u16 = 11_796; // 18% honest number.
-    pub const SubtensorInitialWeightsVersionKey: u64 = 0;
-    pub const SubtensorInitialMinDifficulty: u64 = 10_000_000;
-    pub const SubtensorInitialMaxDifficulty: u64 = u64::MAX / 4;
-    pub const SubtensorInitialServingRateLimit: u64 = 50; 
-	pub const SubtensorInitialBurn: u64 = 1_000_000_000; // 1 tao
-	pub const SubtensorInitialMinBurn: u64 = 1_000_000_000; // 1 tao
-	pub const SubtensorInitialMaxBurn: u64 = 100_000_000_000; // 100 tao
-	pub const SubtensorInitialTxRateLimit: u64 = 1000;
+	pub const SubspaceInitialRho: u16 = 10;
+    pub const SubspaceInitialKappa: u16 = 32_767; // 0.5 = 65535/2 
+    pub const SubspaceInitialMaxAllowedUids: u16 = 4096;
+    pub const SubspaceInitialIssuance: u64 = 0;
+    pub const SubspaceInitialMinAllowedWeights: u16 = 1024;
+    pub const SubspaceInitialEmissionValue: u16 = 0;
+    pub const SubspaceInitialMaxWeightsLimit: u16 = 1000; // 1000/2^16 = 0.015
+    pub const SubspaceInitialValidatorBatchSize: u16 = 32; // 32
+    pub const SubspaceInitialValidatorSequenceLen: u16 = 256; // 256
+    pub const SubspaceInitialValidatorEpochLen: u16 = 100;
+    pub const SubspaceInitialValidatorEpochsPerReset: u16 = 60;
+    pub const SubspaceInitialValidatorExcludeQuantile: u16 = 6554; // 10% of u16
+    pub const SubspaceInitialValidatorPruneLen: u64 = 1;
+    pub const SubspaceInitialValidatorLogitsDivergence: u16 = 1310; // 2% of u16
+    pub const SubspaceInitialScalingLawPower: u16 = 50; // 0.5
+    pub const SubspaceInitialSynergyScalingLawPower: u16 = 50; // 0.5
+    pub const SubspaceInitialMaxAllowedValidators: u16 = 128;
+    pub const SubspaceInitialTempo: u16 = 99;
+    pub const SubspaceInitialDifficulty: u64 = 10_000_000;
+    pub const SubspaceInitialAdjustmentInterval: u16 = 100;
+    pub const SubspaceInitialTargetRegistrationsPerInterval: u16 = 2;
+    pub const SubspaceInitialImmunityPeriod: u16 = 4096;
+    pub const SubspaceInitialActivityCutoff: u16 = 5000;
+    pub const SubspaceInitialMaxRegistrationsPerBlock: u16 = 1;
+    pub const SubspaceInitialPruningScore : u16 = u16::MAX;
+    pub const SubspaceInitialBondsMovingAverage: u64 = 900_000;
+    pub const SubspaceInitialDefaultTake: u16 = 11_796; // 18% honest number.
+    pub const SubspaceInitialWeightsVersionKey: u64 = 0;
+    pub const SubspaceInitialMinDifficulty: u64 = 10_000_000;
+    pub const SubspaceInitialMaxDifficulty: u64 = u64::MAX / 4;
+    pub const SubspaceInitialServingRateLimit: u64 = 50; 
+	pub const SubspaceInitialBurn: u64 = 1_000_000_000; // 1 tao
+	pub const SubspaceInitialMinBurn: u64 = 1_000_000_000; // 1 tao
+	pub const SubspaceInitialMaxBurn: u64 = 100_000_000_000; // 100 tao
+	pub const SubspaceInitialTxRateLimit: u64 = 1000;
 }
 
-impl pallet_subtensor::Config for Runtime {
+impl pallet_subspace::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type Currency = Balances;
-	type InitialRho = SubtensorInitialRho;
-	type InitialKappa = SubtensorInitialKappa;
-	type InitialMaxAllowedUids = SubtensorInitialMaxAllowedUids;
-	type InitialBondsMovingAverage = SubtensorInitialBondsMovingAverage;
-	type InitialIssuance = SubtensorInitialIssuance;
-	type InitialMinAllowedWeights = SubtensorInitialMinAllowedWeights;
-	type InitialEmissionValue = SubtensorInitialEmissionValue;
-	type InitialMaxWeightsLimit = SubtensorInitialMaxWeightsLimit;
-	type InitialValidatorBatchSize = SubtensorInitialValidatorBatchSize;
-	type InitialValidatorSequenceLen = SubtensorInitialValidatorSequenceLen;
-	type InitialValidatorEpochLen = SubtensorInitialValidatorEpochLen;
-	type InitialValidatorEpochsPerReset = SubtensorInitialValidatorEpochsPerReset;
-	type InitialValidatorExcludeQuantile = SubtensorInitialValidatorExcludeQuantile;
-	type InitialValidatorPruneLen = SubtensorInitialValidatorPruneLen;
-	type InitialValidatorLogitsDivergence = SubtensorInitialValidatorLogitsDivergence;
-	type InitialScalingLawPower = SubtensorInitialScalingLawPower;
-	type InitialSynergyScalingLawPower = SubtensorInitialSynergyScalingLawPower;
-	type InitialTempo = SubtensorInitialTempo;
-	type InitialDifficulty = SubtensorInitialDifficulty;
-	type InitialAdjustmentInterval = SubtensorInitialAdjustmentInterval;
-	type InitialTargetRegistrationsPerInterval = SubtensorInitialTargetRegistrationsPerInterval;
-	type InitialImmunityPeriod = SubtensorInitialImmunityPeriod;
-	type InitialActivityCutoff = SubtensorInitialActivityCutoff;
-	type InitialMaxRegistrationsPerBlock = SubtensorInitialMaxRegistrationsPerBlock;
-	type InitialPruningScore = SubtensorInitialPruningScore;
-	type InitialMaxAllowedValidators = SubtensorInitialMaxAllowedValidators;
-	type InitialDefaultTake = SubtensorInitialDefaultTake;
-	type InitialWeightsVersionKey = SubtensorInitialWeightsVersionKey;
-	type InitialMaxDifficulty = SubtensorInitialMaxDifficulty;
-	type InitialMinDifficulty = SubtensorInitialMinDifficulty;
-	type InitialServingRateLimit = SubtensorInitialServingRateLimit;
-	type InitialBurn = SubtensorInitialBurn;
-	type InitialMaxBurn = SubtensorInitialMaxBurn;
-	type InitialMinBurn = SubtensorInitialMinBurn;
-	type InitialTxRateLimit = SubtensorInitialTxRateLimit;
+	type InitialRho = SubspaceInitialRho;
+	type InitialKappa = SubspaceInitialKappa;
+	type InitialMaxAllowedUids = SubspaceInitialMaxAllowedUids;
+	type InitialBondsMovingAverage = SubspaceInitialBondsMovingAverage;
+	type InitialIssuance = SubspaceInitialIssuance;
+	type InitialMinAllowedWeights = SubspaceInitialMinAllowedWeights;
+	type InitialEmissionValue = SubspaceInitialEmissionValue;
+	type InitialMaxWeightsLimit = SubspaceInitialMaxWeightsLimit;
+	type InitialValidatorBatchSize = SubspaceInitialValidatorBatchSize;
+	type InitialValidatorSequenceLen = SubspaceInitialValidatorSequenceLen;
+	type InitialValidatorEpochLen = SubspaceInitialValidatorEpochLen;
+	type InitialValidatorEpochsPerReset = SubspaceInitialValidatorEpochsPerReset;
+	type InitialValidatorExcludeQuantile = SubspaceInitialValidatorExcludeQuantile;
+	type InitialValidatorPruneLen = SubspaceInitialValidatorPruneLen;
+	type InitialValidatorLogitsDivergence = SubspaceInitialValidatorLogitsDivergence;
+	type InitialScalingLawPower = SubspaceInitialScalingLawPower;
+	type InitialSynergyScalingLawPower = SubspaceInitialSynergyScalingLawPower;
+	type InitialTempo = SubspaceInitialTempo;
+	type InitialDifficulty = SubspaceInitialDifficulty;
+	type InitialAdjustmentInterval = SubspaceInitialAdjustmentInterval;
+	type InitialTargetRegistrationsPerInterval = SubspaceInitialTargetRegistrationsPerInterval;
+	type InitialImmunityPeriod = SubspaceInitialImmunityPeriod;
+	type InitialActivityCutoff = SubspaceInitialActivityCutoff;
+	type InitialMaxRegistrationsPerBlock = SubspaceInitialMaxRegistrationsPerBlock;
+	type InitialPruningScore = SubspaceInitialPruningScore;
+	type InitialMaxAllowedValidators = SubspaceInitialMaxAllowedValidators;
+	type InitialDefaultTake = SubspaceInitialDefaultTake;
+	type InitialWeightsVersionKey = SubspaceInitialWeightsVersionKey;
+	type InitialMaxDifficulty = SubspaceInitialMaxDifficulty;
+	type InitialMinDifficulty = SubspaceInitialMinDifficulty;
+	type InitialServingRateLimit = SubspaceInitialServingRateLimit;
+	type InitialBurn = SubspaceInitialBurn;
+	type InitialMaxBurn = SubspaceInitialMaxBurn;
+	type InitialMinBurn = SubspaceInitialMinBurn;
+	type InitialTxRateLimit = SubspaceInitialTxRateLimit;
 }
 
 // Create the runtime by composing the FRAME pallets that were previously configured.
@@ -408,7 +408,7 @@ construct_runtime!(
 		Balances: pallet_balances,
 		TransactionPayment: pallet_transaction_payment,
 		Sudo: pallet_sudo,
-		SubtensorModule: pallet_subtensor
+		SubspaceModule: pallet_subspace
 	}
 );
 
@@ -455,7 +455,7 @@ mod benches {
 		[frame_benchmarking, BaselineBench::<Runtime>]
 		[frame_system, SystemBench::<Runtime>]
 		[pallet_balances, Balances]
-		[pallet_subtensor, SubtensorModule]
+		[pallet_subspace, SubspaceModule]
 		[pallet_timestamp, Timestamp]
 	);
 }
@@ -683,14 +683,14 @@ impl_runtime_apis! {
 		}
 	}
 
-	impl subtensor_custom_rpc_runtime_api::DelegateInfoRuntimeApi<Block> for Runtime {
+	impl subspace_custom_rpc_runtime_api::DelegateInfoRuntimeApi<Block> for Runtime {
 		fn get_delegates() -> Vec<u8> {
-			let result = SubtensorModule::get_delegates();
+			let result = SubspaceModule::get_delegates();
 			result.encode()
 		}
 
 		fn get_delegate(delegate_account_vec: Vec<u8>) -> Vec<u8> {
-			let _result = SubtensorModule::get_delegate(delegate_account_vec);
+			let _result = SubspaceModule::get_delegate(delegate_account_vec);
 			if _result.is_some() {
 				let result = _result.expect("Could not get DelegateInfo");
 				result.encode()
@@ -700,36 +700,36 @@ impl_runtime_apis! {
 		}
 
 		fn get_delegated(delegatee_account_vec: Vec<u8>) -> Vec<u8> {
-			let result = SubtensorModule::get_delegated(delegatee_account_vec);
+			let result = SubspaceModule::get_delegated(delegatee_account_vec);
 			result.encode()
 		}
 	}
 
-	impl subtensor_custom_rpc_runtime_api::NeuronInfoRuntimeApi<Block> for Runtime {
-		fn get_neurons_lite(netuid: u16) -> Vec<u8> {
-			let result = SubtensorModule::get_neurons_lite(netuid);
+	impl subspace_custom_rpc_runtime_api::ModuleInfoRuntimeApi<Block> for Runtime {
+		fn get_modules_lite(netuid: u16) -> Vec<u8> {
+			let result = SubspaceModule::get_modules_lite(netuid);
 			result.encode()
 		}
 
-		fn get_neuron_lite(netuid: u16, uid: u16) -> Vec<u8> {
-			let _result = SubtensorModule::get_neuron_lite(netuid, uid);
+		fn get_module_lite(netuid: u16, uid: u16) -> Vec<u8> {
+			let _result = SubspaceModule::get_module_lite(netuid, uid);
 			if _result.is_some() {
-				let result = _result.expect("Could not get NeuronInfoLite");
+				let result = _result.expect("Could not get ModuleInfoLite");
 				result.encode()
 			} else {
 				vec![]
 			}
 		}
 
-		fn get_neurons(netuid: u16) -> Vec<u8> {
-			let result = SubtensorModule::get_neurons(netuid);
+		fn get_modules(netuid: u16) -> Vec<u8> {
+			let result = SubspaceModule::get_modules(netuid);
 			result.encode()
 		}
 
-		fn get_neuron(netuid: u16, uid: u16) -> Vec<u8> {
-			let _result = SubtensorModule::get_neuron(netuid, uid);
+		fn get_module(netuid: u16, uid: u16) -> Vec<u8> {
+			let _result = SubspaceModule::get_module(netuid, uid);
 			if _result.is_some() {
-				let result = _result.expect("Could not get NeuronInfo");
+				let result = _result.expect("Could not get ModuleInfo");
 				result.encode()
 			} else {
 				vec![]
@@ -737,9 +737,9 @@ impl_runtime_apis! {
 		}
 	}
 
-	impl subtensor_custom_rpc_runtime_api::SubnetInfoRuntimeApi<Block> for Runtime {
+	impl subspace_custom_rpc_runtime_api::SubnetInfoRuntimeApi<Block> for Runtime {
 		fn get_subnet_info(netuid: u16) -> Vec<u8> {
-			let _result = SubtensorModule::get_subnet_info(netuid);
+			let _result = SubspaceModule::get_subnet_info(netuid);
 			if _result.is_some() {
 				let result = _result.expect("Could not get SubnetInfo");
 				result.encode()
@@ -749,7 +749,7 @@ impl_runtime_apis! {
 		}
 
 		fn get_subnets_info() -> Vec<u8> {
-			let result = SubtensorModule::get_subnets_info();
+			let result = SubspaceModule::get_subnets_info();
 			result.encode()
 		}
 	}

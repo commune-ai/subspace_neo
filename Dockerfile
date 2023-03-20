@@ -9,11 +9,11 @@ ARG DEBIAN_FRONTEND=noninteractive
 
 LABEL ai.opentensor.image.authors="operations@opentensor.ai" \
         ai.opentensor.image.vendor="Opentensor Foundation" \
-        ai.opentensor.image.title="opentensor/subtensor" \
-        ai.opentensor.image.description="Opentensor Subtensor Blockchain" \
+        ai.opentensor.image.title="opentensor/subspace" \
+        ai.opentensor.image.description="Opentensor Subspace Blockchain" \
         ai.opentensor.image.revision="${VCS_REF}" \
         ai.opentensor.image.created="${BUILD_DATE}" \
-        ai.opentensor.image.documentation="https://docs.bittensor.com"
+        ai.opentensor.image.documentation="https://docs.commune.com"
 
 # show backtraces
 ENV RUST_BACKTRACE 1
@@ -25,8 +25,8 @@ RUN apt-get update && apt-get install -y curl build-essential protobuf-compiler 
 RUN curl https://sh.rustup.rs -sSf | sh -s -- -y
 ENV PATH="/root/.cargo/bin:${PATH}"
 
-RUN mkdir -p /subtensor
-WORKDIR /subtensor
+RUN mkdir -p /subspace
+WORKDIR /subspace
 COPY . .
 
 # Update to nightly toolchain
@@ -37,7 +37,7 @@ RUN cargo build --release --features runtime-benchmarks --locked
 EXPOSE 30333 9933 9944
 
 FROM $BASE_IMAGE
-COPY --from=builder /subtensor/snapshot.json /
-COPY --from=builder /subtensor/target/release/node-subtensor /
-COPY --from=builder /subtensor/raw_spec.json .
+COPY --from=builder /subspace/snapshot.json /
+COPY --from=builder /subspace/target/release/node-subspace /
+COPY --from=builder /subspace/raw_spec.json .
 

@@ -1,9 +1,9 @@
 version: "3.2"
 
 services:
-  node-subtensor:
-    container_name: node-subtensor
-    image: opentensor/subtensor:latest
+  node-subspace:
+    container_name: node-subspace
+    image: opentensor/subspace:latest
     cpu_count: 4
     mem_limit: 40000000000
     memswap_limit: 80000000000
@@ -16,6 +16,6 @@ services:
       - "30333"
       - "9933"
     environment:
-      - CARGO_HOME=/var/www/node-subtensor/.cargo
-    command: bash -c "./node-subtensor --base-path /tmp/blockchain --chain /raw_spec.json --rpc-external --ws-external --rpc-cors all --no-mdns --ws-max-connections 10000 --in-peers 500 --out-peers 500 --bootnodes /ip4/13.58.175.193/tcp/30333/p2p/12D3KooWEXY393DjTvBip3DnZeJkSAeZrg6edxqu45ywHzzQS2BY --sync warp"
+      - CARGO_HOME=/var/www/node-subspace/.cargo
+    command: bash -c "./node-subspace --base-path /tmp/blockchain --chain /raw_spec.json --rpc-external --ws-external --rpc-cors all --no-mdns --ws-max-connections 10000 --in-peers 500 --out-peers 500 --bootnodes /ip4/13.58.175.193/tcp/30333/p2p/12D3KooWEXY393DjTvBip3DnZeJkSAeZrg6edxqu45ywHzzQS2BY --sync warp"
 

@@ -8,7 +8,7 @@
 use std::sync::Arc;
 
 use jsonrpsee::RpcModule;
-use node_subtensor_runtime::{opaque::Block, AccountId, Balance, Index};
+use node_subspace_runtime::{opaque::Block, AccountId, Balance, Index};
 use sc_transaction_pool_api::TransactionPool;
 use sp_api::ProvideRuntimeApi;
 use sp_block_builder::BlockBuilder;
@@ -37,20 +37,20 @@ where
 	C::Api: substrate_frame_rpc_system::AccountNonceApi<Block, AccountId, Index>,
 	C::Api: pallet_transaction_payment_rpc::TransactionPaymentRuntimeApi<Block, Balance>,
 	C::Api: BlockBuilder<Block>,
-	C::Api: subtensor_custom_rpc_runtime_api::DelegateInfoRuntimeApi<Block>,
-	C::Api: subtensor_custom_rpc_runtime_api::NeuronInfoRuntimeApi<Block>,
-	C::Api: subtensor_custom_rpc_runtime_api::SubnetInfoRuntimeApi<Block>,
+	C::Api: subspace_custom_rpc_runtime_api::DelegateInfoRuntimeApi<Block>,
+	C::Api: subspace_custom_rpc_runtime_api::ModuleInfoRuntimeApi<Block>,
+	C::Api: subspace_custom_rpc_runtime_api::SubnetInfoRuntimeApi<Block>,
 	P: TransactionPool + 'static
 {
 	use pallet_transaction_payment_rpc::{TransactionPayment, TransactionPaymentApiServer};
 	use substrate_frame_rpc_system::{System, SystemApiServer};
-	use subtensor_custom_rpc::{SubtensorCustomApiServer, SubtensorCustom};
+	use subspace_custom_rpc::{SubspaceCustomApiServer, SubspaceCustom};
 
 	let mut module = RpcModule::new(());
 	let FullDeps { client, pool, deny_unsafe } = deps;
 
 	// Custom RPC methods for Paratensor
-	module.merge(SubtensorCustom::new(client.clone()).into_rpc())?;
+	module.merge(SubspaceCustom::new(client.clone()).into_rpc())?;
 
 	module.merge(System::new(client.clone(), pool.clone(), deny_unsafe).into_rpc())?;
 	module.merge(TransactionPayment::new(client).into_rpc())?;

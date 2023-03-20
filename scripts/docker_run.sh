@@ -2,7 +2,7 @@
 # This script is meant to be run on Unix/Linux based systems
 set -e
 
-echo "*** Start Substrate node subtensor ***"
+echo "*** Start Substrate node subspace ***"
 
 cd "$(dirname "${BASH_SOURCE[0]}")"/..
 
