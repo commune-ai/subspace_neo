@@ -5,6 +5,25 @@ extern crate alloc;
 use alloc::vec::Vec;
 use codec::Compact;
 
+#[derive(Decode, Encode, PartialEq, Eq, Clone, Debug)]
+pub struct ModuleMetadata<T: Config> {
+    key: T::AccountId,
+    uid: Compact<u16>,
+    netuids: Vec<Compact<u16>>,
+    active: bool,
+    module_info: ModuleInfo,
+    stake: Vec<(T::AccountId, Compact<u64>)>, // map of key to stake on this module/key (includes delegations)
+    rank: Compact<u16>,
+    emission: Compact<u64>,
+    incentive: Compact<u16>,
+    dividends: Compact<u16>,
+    last_update: Compact<u64>,
+    weights: Vec<(Compact<u16>, Compact<u16>)>, // Vec of (uid, weight)
+    bonds: Vec<(Compact<u16>, Compact<u16>)>, // Vec of (uid, bond)
+    pruning_score: Compact<u16>,
+}
+
+
 impl<T: Config> Pallet<T> {
 	pub fn get_modules(netuid: u16) -> Vec<ModuleInfo<T>> {
         if !Self::if_subnet_exist(netuid) {
@@ -41,10 +60,6 @@ impl<T: Config> Pallet<T> {
             key = _key.expect("key should exist");
         }
 
-        let module_info = Self::get_module_info( netuid, &key.clone() );
-
-        let prometheus_info = Self::get_prometheus_info( netuid, &key.clone() );
-
             
         let active = Self::get_active_for_uid( netuid, uid as u16 );
         let rank = Self::get_rank_for_uid( netuid, uid as u16 );
@@ -65,12 +80,15 @@ impl<T: Config> Pallet<T> {
         let stake: Compact<u64> = Stake<T>::get(netuid, uid).into();
             .collect();
 
-        let module = ModuleInfo {
+        let module_info = Self::get_module_info( netuid, &key.clone() );
+
+        let module = ModuleMetadata {
             key: key.clone(),
             uid: uid.into(),
             netuid: netuid.into(),
             active: active,
-            module_info: module_info,
+            ip: module_info.ip,
+            port: module_info.port,
             stake: stake,
             rank: rank.into(),
             emission: emission.into(),
