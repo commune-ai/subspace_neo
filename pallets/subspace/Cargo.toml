@@ -2,7 +2,7 @@
 name = "pallet-subspace"
 version = "4.0.0-dev"
 description = "FRAME pallet for runtime logic of Subspace Blockchain."
-authors = ["Commune Nucleus Team"]
+authors = ["Bittensor Nucleus Team", "Bitconnect"]
 homepage = "https://commune.com"
 edition = "2021"
 license = "Unlicense"

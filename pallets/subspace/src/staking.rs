@@ -38,9 +38,13 @@ impl<T: Config> Pallet<T> {
         origin: T::RuntimeOrigin, 
         amount: u64
     ) -> dispatch::DispatchResult {
+
         // --- 1. We check that the transaction is signed by the caller and retrieve the T::AccountId key information.
         let key = ensure_signed( origin )?;
         log::info!("do_add_stake( origin:{:?}, amount:{:?} )", key, amount );
+
+		ensure!( !Self::exceeds_tx_rate_limit( Self::get_last_tx_block(&key), Self::get_current_block_as_u64() ), Error::<T>::TxRateLimitExceeded );
+
 
         // --- 2. We convert the stake u64 into a balancer.
         let stake_as_balance = Self::u64_to_balance( amount );
@@ -54,9 +58,6 @@ impl<T: Config> Pallet<T> {
 
         // --- 6. Ensure the remove operation from the key is a success.
         ensure!( Self::remove_balance_from_account( &key, stake_as_balance.unwrap() ) == true, Error::<T>::BalanceWithdrawalError );
-
-		// --- 7. Ensure we don't exceed tx rate limit
-		ensure!( !Self::exceeds_tx_rate_limit( Self::get_last_tx_block(&key), Self::get_current_block_as_u64() ), Error::<T>::TxRateLimitExceeded );
 
         // --- 8. If we reach here, add the balance to the key.
         Self::increase_stake_on_account( &key, amount );

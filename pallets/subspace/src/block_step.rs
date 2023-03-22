@@ -117,7 +117,7 @@ impl<T: Config> Pallet<T> {
         }
     }
     // Distributes token inflation through the key based on emission. The call ensures that the inflation
-    // is distributed onto the accounts in proportion of the stake delegated minus the take. This function
+    // is distributed onto the accounts in proportion of the stake  minus the take. This function
     // is called after an epoch to distribute the newly minted stake according to delegation.
     //
     pub fn emit_inflation_through_account( key: &T::AccountId, emission: u64) {
@@ -128,8 +128,6 @@ impl<T: Config> Pallet<T> {
 
         }
 
-        // --- 5. Last increase final account balance of delegate after 4, since 5 will change the stake proportion of 
-        // the delegate and effect calculation in 4.
     }
 
     // Increases the stake on the cold - hot pairing by increment while also incrementing other counters.
@@ -160,7 +158,7 @@ impl<T: Config> Pallet<T> {
     }
 
 
-    // Adjusts the network difficulties/burns of every active network. Reseting state parameters.
+    // Adjusts the network difficulties of every active network. Reseting state parameters.
     //
     pub fn adjust_registration_terms_for_networks( ) {
         
@@ -182,26 +180,14 @@ impl<T: Config> Pallet<T> {
             // If so, we need to adjust the registration difficulty based on target and actual registrations.
             if ( current_block - last_adjustment_block ) >= adjustment_interval as u64 {
 
-                // --- 4. Get the current counters for this network w.r.t burn and difficulty values.
-                let current_burn: u64 = Self::get_burn_as_u64( netuid );
+                // --- 4. Get the current counters for this network and difficulty values.
                 let registrations_this_interval: u16 = Self::get_registrations_this_interval( netuid );
-                let burn_registrations_this_interval: u16 = Self::get_burn_registrations_this_interval( netuid );
                 let target_registrations_this_interval: u16 = Self::get_target_registrations_per_interval( netuid );
-                // --- 5. Adjust burn + pow
-                // There are four cases to consider. A, B, C, D
-                if registrations_this_interval > target_registrations_this_interval {
-
-                    // B. There are too many registrations this interval and most of them are burn registrations
-                    // this triggers an increase in the burn cost.
-                    // burn_cost ++
-                    Self::set_burn( netuid, Self::adjust_burn( netuid, current_burn, registrations_this_interval, target_registrations_this_interval ) );
-                }
-
+   
 
                 // --- 6. Drain all counters for this network for this interval.
                 Self::set_last_adjustment_block( netuid, current_block );
                 Self::set_registrations_this_interval( netuid, 0 );
-                Self::set_burn_registrations_this_interval( netuid, 0 );
             }
 
             // --- 7. Drain block registrations for each network. Needed for registration rate limits.

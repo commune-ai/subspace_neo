@@ -14,100 +14,6 @@ const LOG_TARGET: &'static str = "runtime::subspace::registration";
 impl<T: Config> Pallet<T> {
 
 
-    // ---- The implementation for the extrinsic do_burned_registration: registering by burning TAO.
-    //
-    // # Args:
-    // 	* 'origin': (<T as frame_system::Config>RuntimeOrigin):
-    // 		- The signature of the calling key. 
-    //             Burned registers can only be created by the key.
-    //
-    // 	* 'netuid' (u16):
-    // 		- The u16 network identifier.
-    // 
-    // 	* 'key' ( T::AccountId ):
-    // 		- key to be registered to the network.
-    //   
-    // # Event:
-    // 	* ModuleRegistered;
-    // 		- On successfully registereing a uid to a module slot on a subnetwork.
-    //
-    // # Raises:
-    // 	* 'NetworkDoesNotExist':
-    // 		- Attempting to registed to a non existent network.
-    //
-    // 	* 'TooManyRegistrationsThisBlock':
-    // 		- This registration exceeds the total allowed on this network this block.
-    //
-    // 	* 'AlreadyRegistered':
-    // 		- The key is already registered on this network.
-    //
-    pub fn do_burned_registration( 
-        origin: T::RuntimeOrigin,
-        netuid: u16, 
-    ) -> DispatchResult {
-
-        // --- 1. Check that the caller has signed the transaction. (the key of the pairing)
-        let key = ensure_signed( origin )?; 
-        log::info!("do_registration( key:{:?} netuid:{:?} )", key, netuid );
-
-        // --- 2. Ensure the passed network is valid.
-        ensure!( Self::if_subnet_exist( netuid ), Error::<T>::NetworkDoesNotExist ); 
-
-        // --- 3. Ensure we are not exceeding the max allowed registrations per block.
-        ensure!( Self::get_registrations_this_block( netuid ) < Self::get_max_registrations_per_block( netuid ), Error::<T>::TooManyRegistrationsThisBlock );
-
-        // --- 4. Ensure that the key is not already registered.
-        ensure!( !Uids::<T>::contains_key( netuid, &key ), Error::<T>::AlreadyRegistered );
-
-        // --- 6. Ensure the callers key has enough stake to perform the transaction.
-        
-        let registration_cost_as_balance = Self::u64_to_balance( Self::get_burn_as_u64( netuid ) ).unwrap();
-        ensure!( Self::can_remove_balance_from_account( &key, registration_cost_as_balance ), Error::<T>::NotEnoughBalanceToStake );
-
-        // --- 7. Ensure the remove operation from the key is a success.
-        ensure!( Self::remove_balance_from_account( &key, registration_cost_as_balance ) == true, Error::<T>::BalanceWithdrawalError );
-        
-        // The burn occurs here.
-        TotalIssuance::<T>::put( TotalIssuance::<T>::get().saturating_sub( Self::get_burn_as_u64( netuid ) ) );
-
- 
-        // --- 10. Append module or prune it.
-        let subnetwork_uid: u16;
-        let current_subnetwork_n: u16 = Self::get_subnetwork_n( netuid );
-
-        // Possibly there is no module slots at all.
-        ensure!( Self::get_max_allowed_uids( netuid ) != 0, Error::<T>::NetworkDoesNotExist );
-        
-        if current_subnetwork_n < Self::get_max_allowed_uids( netuid ) {
-            // --- 11.1.1 No replacement required, the uid appends the subnetwork.
-            // We increment the subnetwork count here but not below.
-            subnetwork_uid = current_subnetwork_n;
-
-            // --- 11.1.2 Expand subnetwork with new account.
-            Self::append_module( netuid, &key, current_block_number );
-            log::info!("add new module account");
-        } else {
-            // --- 12.1.1 Replacement required.
-            // We take the module with the lowest pruning score here.
-            subnetwork_uid = Self::get_module_to_prune( netuid );
-
-            // --- 12.1.1 Replace the module account with the new info.
-            Self::replace_module( netuid, subnetwork_uid, &key, current_block_number );
-            log::info!("prune module");
-        }
-
-        // --- 13. Record the registration and increment block and interval counters.
-        BurnRegistrationsThisInterval::<T>::mutate( netuid, |val| *val += 1 );
-        RegistrationsThisInterval::<T>::mutate( netuid, |val| *val += 1 );
-        RegistrationsThisBlock::<T>::mutate( netuid, |val| *val += 1 );
-    
-        // --- 14. Deposit successful event.
-        log::info!("ModuleRegistered( netuid:{:?} uid:{:?} key:{:?}  ) ", netuid, subnetwork_uid, key );
-        Self::deposit_event( Event::ModuleRegistered( netuid, subnetwork_uid, key ) );
-
-        // --- 15. Ok and done.
-        Ok(())
-    }
 
     // ---- The implementation for the extrinsic do_registration.
     //
@@ -214,7 +120,6 @@ impl<T: Config> Pallet<T> {
         Ok(())
     }
 
-
     pub fn vec_to_hash( vec_hash: Vec<u8> ) -> H256 {
         let de_ref_hash = &vec_hash; // b: &Vec<u8>
         let de_de_ref_hash: &[u8] = &de_ref_hash; // c: &[u8]
@@ -236,23 +141,11 @@ impl<T: Config> Pallet<T> {
             let block_at_registration: u64 = Self::get_module_block_at_registration( netuid, module_uid_i );
             let current_block :u64 = Self::get_current_block_as_u64();
             let immunity_period: u64 = Self::get_immunity_period(netuid) as u64;
-            if min_score == pruning_score {
-                if current_block - block_at_registration <  immunity_period { //module is in immunity period
+            // Find min pruning score.
+            if min_score >= pruning_score { 
+                if current_block - block_at_registration <  immunity_period;  { //module is in immunity period
                     if min_score_in_immunity_period > pruning_score {
                         min_score_in_immunity_period = pruning_score; 
-                        uid_with_min_score_in_immunity_period = module_uid_i;
-                    }
-                }
-                else {
-                    min_score = pruning_score; 
-                    uid_with_min_score = module_uid_i;
-                }
-            }
-            // Find min pruning score.
-            else if min_score > pruning_score { 
-                if current_block - block_at_registration <  immunity_period { //module is in immunity period
-                    if min_score_in_immunity_period > pruning_score {
-                         min_score_in_immunity_period = pruning_score; 
                         uid_with_min_score_in_immunity_period = module_uid_i;
                     }
                 }
@@ -301,40 +194,5 @@ impl<T: Config> Pallet<T> {
         return hash_as_vec
     }
 
-    pub fn create_seal_hash( block_number_u64: u64, nonce_u64: u64 ) -> H256 {
-        let nonce = U256::from( nonce_u64 );
-        let block_hash_at_number: H256 = Self::get_block_hash_from_u64( block_number_u64 );
-        let block_hash_bytes: &[u8] = block_hash_at_number.as_bytes();
-        let full_bytes: &[u8; 40] = &[
-            nonce.byte(0),  nonce.byte(1),  nonce.byte(2),  nonce.byte(3),
-            nonce.byte(4),  nonce.byte(5),  nonce.byte(6),  nonce.byte(7),
-
-            block_hash_bytes[0], block_hash_bytes[1], block_hash_bytes[2], block_hash_bytes[3],
-            block_hash_bytes[4], block_hash_bytes[5], block_hash_bytes[6], block_hash_bytes[7],
-            block_hash_bytes[8], block_hash_bytes[9], block_hash_bytes[10], block_hash_bytes[11],
-            block_hash_bytes[12], block_hash_bytes[13], block_hash_bytes[14], block_hash_bytes[15],
-
-            block_hash_bytes[16], block_hash_bytes[17], block_hash_bytes[18], block_hash_bytes[19],
-            block_hash_bytes[20], block_hash_bytes[21], block_hash_bytes[22], block_hash_bytes[23],
-            block_hash_bytes[24], block_hash_bytes[25], block_hash_bytes[26], block_hash_bytes[27],
-            block_hash_bytes[28], block_hash_bytes[29], block_hash_bytes[30], block_hash_bytes[31],
-        ];
-        let sha256_seal_hash_vec: [u8; 32] = sha2_256( full_bytes );
-        let keccak_256_seal_hash_vec: [u8; 32] = keccak_256( &sha256_seal_hash_vec );
-        let seal_hash: H256 = H256::from_slice( &keccak_256_seal_hash_vec );
-
-		log::trace!(
-			"\nblock_number: {:?}, \nnonce_u64: {:?}, \nblock_hash: {:?}, \nfull_bytes: {:?}, \nsha256_seal_hash_vec: {:?},  \nkeccak_256_seal_hash_vec: {:?}, \nseal_hash: {:?}",
-			block_number_u64,
-			nonce_u64,
-			block_hash_at_number,
-			full_bytes,
-			sha256_seal_hash_vec,
-            keccak_256_seal_hash_vec,
-			seal_hash
-		);
-
-        return seal_hash;
-    }
 
 }

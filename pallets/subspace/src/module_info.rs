@@ -6,7 +6,7 @@ use alloc::vec::Vec;
 use codec::Compact;
 
 #[derive(Decode, Encode, PartialEq, Eq, Clone, Debug)]
-pub struct ModuleMetadata<T: Config> {
+pub struct ModuleNetworkMetadata<T: Config> {
     key: T::AccountId,
     uid: Compact<u16>,
     netuids: Vec<Compact<u16>>,
@@ -82,7 +82,7 @@ impl<T: Config> Pallet<T> {
 
         let module_info = Self::get_module_info( netuid, &key.clone() );
 
-        let module = ModuleMetadata {
+        let module = ModuleNetworkMetadata {
             key: key.clone(),
             uid: uid.into(),
             netuid: netuid.into(),
