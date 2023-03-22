@@ -60,9 +60,7 @@ impl<T: Config> Pallet<T> {
 		netuid: u16,
         ip: u128, 
         port: u16, 
-        protocol: u8, 
-		placeholder1: u8, 
-		placeholder2: u8,
+        uri: Vec<u8>, // contains a uri string
     ) -> dispatch::DispatchResult {
         // --- 1. We check the callers (key) signature.
         let key_id = ensure_signed(origin)?;
@@ -71,11 +69,11 @@ impl<T: Config> Pallet<T> {
         ensure!( Self::is_key_registered_on_any_network( &key_id ), Error::<T>::NotRegistered );  
         
         // --- 3. Check the ip signature validity.
-        ensure!( Self::is_valid_ip_type(ip_type), Error::<T>::InvalidIpType );
-        ensure!( Self::is_valid_ip_address(ip_type, ip), Error::<T>::InvalidIpAddress );
+        ensure!( Self::is_valid_ip_address(ip), Error::<T>::InvalidIpAddress );
   
+
         // --- 4. Get the previous module information.
-        let mut prev_module = Self::get_module_info( netuid, &key_id );
+        let mut prev_module = Self::get_module( netuid, &key_id );
         let current_block:u64 = Self::get_current_block_as_u64();
         ensure!( Self::module_passes_rate_limit( netuid, &prev_module, current_block ), Error::<T>::ServingRateLimitExceeded );  
 
@@ -83,6 +81,7 @@ impl<T: Config> Pallet<T> {
         prev_module.block = Self::get_current_block_as_u64();
         prev_module.ip = ip;
         prev_module.port = port;
+        prev_module.uri = uri;
         Modules::<T>::insert( netuid, key_id.clone(), prev_module );
 
         // --- 7. We deposit module served event.
@@ -139,31 +138,27 @@ impl<T: Config> Pallet<T> {
      --==[[  Helper functions   ]]==--
     *********************************/
 
-    pub fn module_passes_rate_limit( netuid: u16, prev_module_info: &ModuleInfoOf, current_block: u64 ) -> bool {
+    pub fn module_passes_rate_limit( netuid: u16, prev_module: &Module, current_block: u64 ) -> bool {
         let rate_limit: u64 = Self::get_serving_rate_limit(netuid);
-        let last_serve = prev_module_info.block;
+        let last_serve = prev_module.block;
         return rate_limit == 0 || last_serve == 0 || current_block - last_serve >= rate_limit;
     }
 
 
-    pub fn has_module_info( netuid: u16, key: &T::AccountId ) -> bool {
+    pub fn has_module( netuid: u16, key: &T::AccountId ) -> bool {
         return Modules::<T>::contains_key( netuid, key );
     }
 
 
-    pub fn get_module_info( netuid: u16, key: &T::AccountId ) -> ModuleInfoOf {
-        if Self::has_module_info( netuid, key ) {
+    pub fn get_module( netuid: u16, key: &T::AccountId ) -> Module {
+        if Self::has_module( netuid, key ) {
             return Modules::<T>::get( netuid, key ).unwrap();
         } else{
-            return ModuleInfo { 
+            return Module { 
                 block: 0,
                 version: 0,
                 ip: 0,
                 port: 0,
-                ip_type: 0,
-                protocol: 0,
-                placeholder1: 0,
-                placeholder2: 0
             }
 
         }
@@ -174,11 +169,10 @@ impl<T: Config> Pallet<T> {
         return allowed_values.contains(&ip_type);
     }
 
+
     // @todo (Parallax 2-1-2021) : Implement exclusion of private IP ranges
-    pub fn is_valid_ip_address(ip_type: u8, addr: u128) -> bool {
-        if !Self::is_valid_ip_type(ip_type) {
-            return false;
-        }
+    pub fn is_valid_ip_address(addr: u128) -> bool {
+        let ip_type = Self::get_ip_type(addr);
         if addr == 0 {
             return false;
         }
@@ -194,6 +188,18 @@ impl<T: Config> Pallet<T> {
         }
         return true;
     }
+
+
+    fn get_ip_type(ip: u128) -> u8 {
+        if ip <= u32::MAX as u128 {
+            return 4;
+        } else if ip <= u128::MAX {
+            return 6;
+        } 
+
+        // If the IP address is not IPv4 or IPv6 and not private, raise an error
+        return 0;
+    } 
 
 
 }

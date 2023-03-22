@@ -6,12 +6,12 @@ use alloc::vec::Vec;
 use codec::Compact;
 
 #[derive(Decode, Encode, PartialEq, Eq, Clone, Debug)]
-pub struct ModuleNetworkMetadata<T: Config> {
+pub struct ModuleMetadata<T: Config> {
     key: T::AccountId,
     uid: Compact<u16>,
     netuids: Vec<Compact<u16>>,
     active: bool,
-    module_info: ModuleInfo,
+    module: Module,
     stake: Vec<(T::AccountId, Compact<u64>)>, // map of key to stake on this module/key (includes delegations)
     rank: Compact<u16>,
     emission: Compact<u64>,
@@ -25,7 +25,7 @@ pub struct ModuleNetworkMetadata<T: Config> {
 
 
 impl<T: Config> Pallet<T> {
-	pub fn get_modules(netuid: u16) -> Vec<ModuleInfo<T>> {
+	pub fn get_modules(netuid: u16) -> Vec<ModuleMetadata<T>> {
         if !Self::if_subnet_exist(netuid) {
             return Vec::new();
         }
@@ -50,7 +50,7 @@ impl<T: Config> Pallet<T> {
         modules
 	}
 
-    fn get_module_subnet_exists(netuid: u16, uid: u16) -> Option<ModuleInfo<T>> {
+    fn get_module_subnet_exists(netuid: u16, uid: u16) -> Option<ModuleMetadata<T>> {
         let _key = Self::get_key_for_net_and_uid(netuid, uid);
         let key;
         if _key.is_err() {
@@ -80,15 +80,15 @@ impl<T: Config> Pallet<T> {
         let stake: Compact<u64> = Stake<T>::get(netuid, uid).into();
             .collect();
 
-        let module_info = Self::get_module_info( netuid, &key.clone() );
+        let module = Self::get_module( netuid, &key.clone() );
 
         let module = ModuleNetworkMetadata {
             key: key.clone(),
             uid: uid.into(),
             netuid: netuid.into(),
             active: active,
-            ip: module_info.ip,
-            port: module_info.port,
+            ip: module.ip,
+            port: module.port,
             stake: stake,
             rank: rank.into(),
             emission: emission.into(),
@@ -103,7 +103,7 @@ impl<T: Config> Pallet<T> {
         return Some(module);
     }
 
-    pub fn get_module(netuid: u16, uid: u16) -> Option<ModuleInfo<T>> {
+    pub fn get_module(netuid: u16, uid: u16) -> Option<Module<T>> {
         if !Self::if_subnet_exist(netuid) {
             return None;
         }

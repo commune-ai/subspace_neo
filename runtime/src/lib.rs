@@ -316,14 +316,11 @@ impl pallet_sudo::Config for Runtime {
 // Configure the pallet subspace.
 parameter_types! {
 	pub const SubspaceInitialRho: u16 = 10;
-    pub const SubspaceInitialKappa: u16 = 32_767; // 0.5 = 65535/2 
     pub const SubspaceInitialMaxAllowedUids: u16 = 4096;
     pub const SubspaceInitialIssuance: u64 = 0;
     pub const SubspaceInitialMinAllowedWeights: u16 = 1024;
     pub const SubspaceInitialEmissionValue: u16 = 0;
     pub const SubspaceInitialMaxWeightsLimit: u16 = 1000; // 1000/2^16 = 0.015
-    pub const SubspaceInitialScalingLawPower: u16 = 50; // 0.5
-    pub const SubspaceInitialSynergyScalingLawPower: u16 = 50; // 0.5
     pub const SubspaceInitialTempo: u16 = 99;
     pub const SubspaceInitialAdjustmentInterval: u16 = 100;
     pub const SubspaceInitialTargetRegistrationsPerInterval: u16 = 2;
@@ -332,12 +329,7 @@ parameter_types! {
     pub const SubspaceInitialMaxRegistrationsPerBlock: u16 = 1;
     pub const SubspaceInitialPruningScore : u16 = u16::MAX;
     pub const SubspaceInitialBondsMovingAverage: u64 = 900_000;
-    pub const SubspaceInitialDefaultTake: u16 = 11_796; // 18% honest number.
-    pub const SubspaceInitialWeightsVersionKey: u64 = 0;
     pub const SubspaceInitialServingRateLimit: u64 = 50; 
-	pub const SubspaceInitialBurn: u64 = 1_000_000_000; // 1 tao
-	pub const SubspaceInitialMinBurn: u64 = 1_000_000_000; // 1 tao
-	pub const SubspaceInitialMaxBurn: u64 = 100_000_000_000; // 100 tao
 	pub const SubspaceInitialTxRateLimit: u64 = 1000;
 }
 
@@ -345,15 +337,12 @@ impl pallet_subspace::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type Currency = Balances;
 	type InitialRho = SubspaceInitialRho;
-	type InitialKappa = SubspaceInitialKappa;
 	type InitialMaxAllowedUids = SubspaceInitialMaxAllowedUids;
 	type InitialBondsMovingAverage = SubspaceInitialBondsMovingAverage;
 	type InitialIssuance = SubspaceInitialIssuance;
 	type InitialMinAllowedWeights = SubspaceInitialMinAllowedWeights;
 	type InitialEmissionValue = SubspaceInitialEmissionValue;
 	type InitialMaxWeightsLimit = SubspaceInitialMaxWeightsLimit;
-	type InitialScalingLawPower = SubspaceInitialScalingLawPower;
-	type InitialSynergyScalingLawPower = SubspaceInitialSynergyScalingLawPower;
 	type InitialTempo = SubspaceInitialTempo;
 	type InitialAdjustmentInterval = SubspaceInitialAdjustmentInterval;
 	type InitialTargetRegistrationsPerInterval = SubspaceInitialTargetRegistrationsPerInterval;
@@ -361,12 +350,7 @@ impl pallet_subspace::Config for Runtime {
 	type InitialActivityCutoff = SubspaceInitialActivityCutoff;
 	type InitialMaxRegistrationsPerBlock = SubspaceInitialMaxRegistrationsPerBlock;
 	type InitialPruningScore = SubspaceInitialPruningScore;
-	type InitialDefaultTake = SubspaceInitialDefaultTake;
-	type InitialWeightsVersionKey = SubspaceInitialWeightsVersionKey;
 	type InitialServingRateLimit = SubspaceInitialServingRateLimit;
-	type InitialBurn = SubspaceInitialBurn;
-	type InitialMaxBurn = SubspaceInitialMaxBurn;
-	type InitialMinBurn = SubspaceInitialMinBurn;
 	type InitialTxRateLimit = SubspaceInitialTxRateLimit;
 }
 
@@ -661,29 +645,7 @@ impl_runtime_apis! {
 		}
 	}
 
-	impl subspace_custom_rpc_runtime_api::DelegateInfoRuntimeApi<Block> for Runtime {
-		fn get_delegates() -> Vec<u8> {
-			let result = SubspaceModule::get_delegates();
-			result.encode()
-		}
-
-		fn get_delegate(delegate_account_vec: Vec<u8>) -> Vec<u8> {
-			let _result = SubspaceModule::get_delegate(delegate_account_vec);
-			if _result.is_some() {
-				let result = _result.expect("Could not get DelegateInfo");
-				result.encode()
-			} else {
-				vec![]
-			}
-		}
-
-		fn get_delegated(delegatee_account_vec: Vec<u8>) -> Vec<u8> {
-			let result = SubspaceModule::get_delegated(delegatee_account_vec);
-			result.encode()
-		}
-	}
-
-	impl subspace_custom_rpc_runtime_api::ModuleInfoRuntimeApi<Block> for Runtime {
+	impl subspace_custom_rpc_runtime_api::ModuleRuntimeApi<Block> for Runtime {
 		fn get_modules(netuid: u16) -> Vec<u8> {
 			let result = SubspaceModule::get_modules(netuid);
 			result.encode()
@@ -692,7 +654,7 @@ impl_runtime_apis! {
 		fn get_module(netuid: u16, uid: u16) -> Vec<u8> {
 			let _result = SubspaceModule::get_module(netuid, uid);
 			if _result.is_some() {
-				let result = _result.expect("Could not get ModuleInfo");
+				let result = _result.expect("Could not get Module");
 				result.encode()
 			} else {
 				vec![]

@@ -63,10 +63,7 @@ mod staking;
 mod utils;
 mod uids;
 mod weights;
-
-pub mod delegate_info;
-pub mod module_info;
-pub mod subnet_info;
+pub mod module;
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -107,12 +104,6 @@ pub mod pallet {
 		type InitialMaxWeightsLimit: Get<u16>;
 		#[pallet::constant] // Tempo for each network
 		type InitialTempo: Get<u16>;
-		#[pallet::constant] // Initial Burn.
-		type InitialBurn: Get<u64>;
-		#[pallet::constant] // Initial Max Burn.
-		type InitialMaxBurn: Get<u64>;
-		#[pallet::constant] // Initial Min Burn.
-		type InitialMinBurn: Get<u64>;
 		#[pallet::constant] // Initial adjustment interval.
 		type InitialAdjustmentInterval: Get<u16>;
 		#[pallet::constant] // Initial bonds moving average.
@@ -129,10 +120,6 @@ pub mod pallet {
 		type InitialMaxRegistrationsPerBlock: Get<u16>;
 		#[pallet::constant] // Initial pruning score for each module
 		type InitialPruningScore: Get<u16>;	
-		#[pallet::constant] // Initial default delegation take.
-		type InitialDefaultTake: Get<u16>;
-		#[pallet::constant] // Initial weights version key.
-		type InitialWeightsVersionKey: Get<u64>;
 		#[pallet::constant] // Initial serving rate limit.
 		type InitialServingRateLimit: Get<u64>;
 		#[pallet::constant] // Initial transaction rate limit.
@@ -145,13 +132,9 @@ pub mod pallet {
 	// ==== Staking + Accounts ====
 	// ============================
 	#[pallet::type_value] 
-	pub fn DefaultDefaultTake<T: Config>() -> u16 { T::InitialDefaultTake::get() }
-	#[pallet::type_value] 
 	pub fn DefaultAccountTake<T: Config>() -> u64 { 0 }
 	#[pallet::type_value]
 	pub fn DefaultBlockEmission<T: Config>() -> u64 {1_000_000_000}
-	#[pallet::type_value] 
-	pub fn DefaultAllowsDelegation<T: Config>() -> bool { false }
 	#[pallet::type_value] 
 	pub fn DefaultTotalIssuance<T: Config>() -> u64 { T::InitialIssuance::get() }
 	#[pallet::type_value] 
@@ -175,23 +158,11 @@ pub mod pallet {
 	pub fn DefaultLastAdjustmentBlock<T: Config>() -> u64 { 0 }
 	#[pallet::type_value]
 	pub fn DefaultRegistrationsThisBlock<T: Config>() ->  u16 { 0}
-	#[pallet::type_value]
-	pub fn DefaultBurn<T: Config>() -> u64 { T::InitialBurn::get() }
-	#[pallet::type_value]
-	pub fn DefaultMinBurn<T: Config>() -> u64 { T::InitialMinBurn::get()  }
-	#[pallet::type_value]
-	pub fn DefaultMaxBurn<T: Config>() -> u64 { T::InitialMaxBurn::get() }
 	#[pallet::type_value] 
 	pub fn DefaultMaxRegistrationsPerBlock<T: Config>() -> u16 { T::InitialMaxRegistrationsPerBlock::get() }
 
 	#[pallet::storage] // ---- StorageItem Global Used Work.
     pub type UsedWork<T:Config> = StorageMap<_, Identity, Vec<u8>, u64, ValueQuery>;
-	#[pallet::storage] // --- MAP ( netuid ) -->Burn
-	pub type Burn<T> = StorageMap<_, Identity, u16, u64, ValueQuery, DefaultBurn<T> >;
-	#[pallet::storage] // --- MAP ( netuid ) --> MinBurn
-	pub type MinBurn<T> = StorageMap<_, Identity, u16, u64, ValueQuery, DefaultMinBurn<T> >;
-	#[pallet::storage] // --- MAP ( netuid ) --> MaxBurn
-	pub type MaxBurn<T> = StorageMap<_, Identity, u16, u64, ValueQuery, DefaultMaxBurn<T> >;
 	#[pallet::storage] // --- MAP ( netuid ) -->  Block at last adjustment.
 	pub type LastAdjustmentBlock<T> = StorageMap<_, Identity, u16, u64, ValueQuery, DefaultLastAdjustmentBlock<T> >;
 	#[pallet::storage] // --- MAP ( netuid ) --> Registration this Block.
@@ -250,15 +221,12 @@ pub mod pallet {
 	// ==== Module / Promo Endpoints =====
 	// =================================
 	
-	// --- Struct for Module.
-	pub type ModuleInfoOf = ModuleInfo;
-	
+
 	#[derive(Decode, Encode, PartialEq, Eq, Clone, Debug)]
-	pub struct ModuleInfo<T: Config> {
+	pub struct Module<T: Config> {
 		pub key: T::AccountId,
 		pub uid: Compact<u16>,
 		pub netuid: Compact<u16>,
-		pub active: bool,
         pub ip: u128, // --- Module u128 encoded ip address of type v6 or v4.
         pub port: u16, // --- Module u16 encoded port.
 		pub name : Vec<u8>, // --- Module name.
@@ -284,8 +252,8 @@ pub mod pallet {
 
 	#[pallet::storage] // --- MAP ( netuid ) --> serving_rate_limit
 	pub type ServingRateLimit<T> = StorageMap<_, Identity, u16, u64, ValueQuery, DefaultServingRateLimit<T>> ;
-	#[pallet::storage] // --- MAP ( netuid, key ) --> module_info
-	pub(super) type Modules<T:Config> = StorageDoubleMap<_, Identity, u16, Blake2_128Concat, T::AccountId, ModuleInfoOf, OptionQuery>;
+	#[pallet::storage] // --- MAP ( netuid, key ) --> module
+	pub(super) type Modules<T:Config> = StorageDoubleMap<_, Identity, u16, Blake2_128Concat, T::AccountId, Module, OptionQuery>;
 
 	// =======================================
 	// ==== Subnetwork Hyperparam storage ====
@@ -302,8 +270,6 @@ pub mod pallet {
 	pub fn DefaultActivityCutoff<T: Config>() -> u16 { T::InitialActivityCutoff::get() }
 	#[pallet::type_value] 
 	pub fn DefaultMaxWeightsLimit<T: Config>() -> u16 { T::InitialMaxWeightsLimit::get() }
-	#[pallet::type_value] 
-	pub fn DefaultWeightsVersionKey<T: Config>() -> u64 { T::InitialWeightsVersionKey::get() }
 	#[pallet::type_value] 
 	pub fn DefaultMinAllowedWeights<T: Config>() -> u16 { T::InitialMinAllowedWeights::get() }
 	#[pallet::type_value]
@@ -406,17 +372,12 @@ pub mod pallet {
 		MaxRegistrationsPerBlockSet( u16, u16), // --- Event created when we set max registrations per block
 		ActivityCutoffSet( u16, u16 ), // --- Event created when an activity cutoff is set for a subnet.
 		RhoSet( u16, u16 ), // --- Event created when Rho value is set.
-		KappaSet( u16, u16 ), // --- Event created when kappa is set for a subnet.
 		MinAllowedWeightSet( u16, u16 ), // --- Event created when minimun allowed weight is set for a subnet.
-		SynergyScalingLawPowerSet( u16, u16 ), // --- Event created when the synergy scaling law has been set for a subnet.
 		WeightsSetRateLimitSet( u16, u64 ), // --- Event create when weights set rate limit has been set for a subnet.
 		ImmunityPeriodSet( u16, u16), // --- Event created when immunity period is set for a subnet.
 		ModuleServed( u16, T::AccountId ), // --- Event created when the module server information is added to the network.
 		PrometheusServed( u16, T::AccountId ), // --- Event created when the module server information is added to the network.
 		EmissionValuesSet(), // --- Event created when emission ratios fr all networks is set.
-		DelegateAdded( T::AccountId, T::AccountId, u16 ), // --- Event created to signal a key has become a delegate.
-		DefaultTakeSet( u16 ), // --- Event created when the default take is set.
-		WeightsVersionKeySet( u16, u64 ), // --- Event created when weights version key is set for a network.
 		ServingRateLimitSet( u16, u64 ), // --- Event created when setting the prometheus serving rate limit.
 		TxRateLimitSet( u64 ), // --- Event created when setting the transaction rate limit.
 	}
@@ -451,7 +412,6 @@ pub mod pallet {
 		EmissionValuesDoesNotMatchNetworks, // --- Thrown when number or recieved emission rates does not match number of networks
 		InvalidEmissionValues, // --- Thrown when emission ratios are not valid (did not sum up to 10^9)
 		DidNotPassConnectedNetworkRequirement, // --- Thrown when a key attempts to register into a network without passing the  registration requirment from another network.
-		AlreadyDelegate, // --- Thrown if the key attempt to become delegate when they are already.
 		SettingWeightsTooFast, // --- Thrown if the key attempts to set weights twice withing net_tempo/2 blocks.
 		IncorrectNetworkVersionKey, // --- Thrown of a validator attempts to set weights from a validator with incorrect code base key.
 		ServingRateLimitExceeded, // --- Thrown when an module or prometheus serving exceeds the rate limit for a registered module.
@@ -490,7 +450,8 @@ pub mod pallet {
 			TotalIssuance::<T>::put(self.balances_issuance);
 
 			// Subnet config values
-			let netuid: u16 = 3;
+			let netname: Vec<u8> = "commune".as_bytes().to_vec();
+			let netuid: u16 = 0;
 			let tempo = 99;
 			let max_uids = 4096;
 			
@@ -511,7 +472,6 @@ pub mod pallet {
 			if !MaxWeightsLimit::<T>::contains_key( netuid ) { MaxWeightsLimit::<T>::insert( netuid, MaxWeightsLimit::<T>::get( netuid ));}
 			if !MinAllowedWeights::<T>::contains_key( netuid ) { MinAllowedWeights::<T>::insert( netuid, MinAllowedWeights::<T>::get( netuid )); }
 			if !RegistrationsThisInterval::<T>::contains_key( netuid ) { RegistrationsThisInterval::<T>::insert( netuid, RegistrationsThisInterval::<T>::get( netuid ));}
-			if !BurnRegistrationsThisInterval::<T>::contains_key( netuid ) { BurnRegistrationsThisInterval::<T>::insert( netuid, BurnRegistrationsThisInterval::<T>::get( netuid ));}
 
 			// Set max allowed uids
 			MaxAllowedUids::<T>::insert(netuid, max_uids);
@@ -1081,7 +1041,6 @@ pub enum CallType {
     SetWeights,
     AddStake,
     RemoveStake,
-	AddDelegate,
     Register,
     Serve,
 	Other,
