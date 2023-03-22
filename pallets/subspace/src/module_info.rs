@@ -5,28 +5,6 @@ extern crate alloc;
 use alloc::vec::Vec;
 use codec::Compact;
 
-#[derive(Decode, Encode, PartialEq, Eq, Clone, Debug)]
-pub struct ModuleInfo<T: Config> {
-    key: T::AccountId,
-    uid: Compact<u16>,
-    netuid: Compact<u16>,
-    active: bool,
-    module_info: ModuleInfo,
-    prometheus_info: PrometheusInfo,
-    stake: Vec<(T::AccountId, Compact<u64>)>, // map of key to stake on this module/key (includes delegations)
-    rank: Compact<u16>,
-    emission: Compact<u64>,
-    incentive: Compact<u16>,
-    consensus: Compact<u16>,
-    trust: Compact<u16>,
-    dividends: Compact<u16>,
-    last_update: Compact<u64>,
-    weights: Vec<(Compact<u16>, Compact<u16>)>, // Vec of (uid, weight)
-    bonds: Vec<(Compact<u16>, Compact<u16>)>, // Vec of (uid, bond)
-    pruning_score: Compact<u16>,
-}
-
-
 impl<T: Config> Pallet<T> {
 	pub fn get_modules(netuid: u16) -> Vec<ModuleInfo<T>> {
         if !Self::if_subnet_exist(netuid) {
@@ -60,7 +38,7 @@ impl<T: Config> Pallet<T> {
             return None;
         } else {
             // No error, key was registered
-            key = _key.expect("Hotkey should exist");
+            key = _key.expect("key should exist");
         }
 
         let module_info = Self::get_module_info( netuid, &key.clone() );
@@ -72,8 +50,6 @@ impl<T: Config> Pallet<T> {
         let rank = Self::get_rank_for_uid( netuid, uid as u16 );
         let emission = Self::get_emission_for_uid( netuid, uid as u16 );
         let incentive = Self::get_incentive_for_uid( netuid, uid as u16 );
-        let consensus = Self::get_consensus_for_uid( netuid, uid as u16 );
-        let trust = Self::get_trust_for_uid( netuid, uid as u16 );
         let dividends = Self::get_dividends_for_uid( netuid, uid as u16 );
         let pruning_score = Self::get_pruning_score_for_uid( netuid, uid as u16 );
         let last_update = Self::get_last_update_for_uid( netuid, uid as u16 );
@@ -93,19 +69,16 @@ impl<T: Config> Pallet<T> {
             key: key.clone(),
             uid: uid.into(),
             netuid: netuid.into(),
-            active,
-            module_info,
-            prometheus_info,
-            stake,
+            active: active,
+            module_info: module_info,
+            stake: stake,
             rank: rank.into(),
             emission: emission.into(),
             incentive: incentive.into(),
-            consensus: consensus.into(),
-            trust: trust.into(),
             dividends: dividends.into(),
             last_update: last_update.into(),
-            weights,
-            bonds,
+            weights: weights,
+            bonds: bonds,
             pruning_score: pruning_score.into()
         };
         

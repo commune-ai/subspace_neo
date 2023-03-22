@@ -204,10 +204,6 @@ pub mod pallet {
 	// ==============================
 	#[pallet::type_value] 
 	pub fn DefaultN<T:Config>() -> u16 { 0 }
-	#[pallet::type_value] 
-	pub fn DefaultModality<T:Config>() -> u16 { 0 }
-	#[pallet::type_value] 
-	pub fn DefaultHotkeys<T:Config>() -> Vec<u16> { vec![ ] }
 	#[pallet::type_value]
 	pub fn DefaultNeworksAdded<T: Config>() ->  bool { false }
 	#[pallet::type_value]
@@ -257,28 +253,19 @@ pub mod pallet {
 	// --- Struct for Module.
 	pub type ModuleInfoOf = ModuleInfo;
 	
-	#[derive(Encode, Decode, Default, TypeInfo, Clone, PartialEq, Eq, Debug)]
-    pub struct ModuleInfo {
-		pub block: u64, // --- Module serving block.
-        pub version: u32, // --- Module version
+	#[derive(Decode, Encode, PartialEq, Eq, Clone, Debug)]
+	pub struct ModuleInfo<T: Config> {
+		pub key: T::AccountId,
+		pub uid: Compact<u16>,
+		pub netuid: Compact<u16>,
+		pub active: bool,
         pub ip: u128, // --- Module u128 encoded ip address of type v6 or v4.
         pub port: u16, // --- Module u16 encoded port.
-        pub ip_type: u8, // --- Module ip type, 4 for ipv4 and 6 for ipv6.
-		pub protocol: u8, // --- Module protocol. TCP, UDP, other.
-		pub placeholder1: u8, // --- Module proto placeholder 1.
-		pub placeholder2: u8, // --- Module proto placeholder 1.
+		pub name : Vec<u8>, // --- Module name.
+		pub uri : Vec<u8>, // --- Module uri.
+		pub last_update: Compact<u64>,
 	}
 
-	// --- Struct for Prometheus.
-	pub type PrometheusInfoOf = PrometheusInfo;
-	#[derive(Encode, Decode, Default, TypeInfo, Clone, PartialEq, Eq, Debug)]
-	pub struct PrometheusInfo {
-		pub block: u64, // --- Prometheus serving block.
-        pub version: u32, // --- Prometheus version.
-        pub ip: u128, // --- Prometheus u128 encoded ip address of type v6 or v4.
-        pub port: u16, // --- Prometheus u16 encoded port.
-        pub ip_type: u8, // --- Prometheus ip type, 4 for ipv4 and 6 for ipv6.
-	}
 
 	// Rate limiting
 	#[pallet::type_value]
@@ -299,8 +286,6 @@ pub mod pallet {
 	pub type ServingRateLimit<T> = StorageMap<_, Identity, u16, u64, ValueQuery, DefaultServingRateLimit<T>> ;
 	#[pallet::storage] // --- MAP ( netuid, key ) --> module_info
 	pub(super) type Modules<T:Config> = StorageDoubleMap<_, Identity, u16, Blake2_128Concat, T::AccountId, ModuleInfoOf, OptionQuery>;
-	#[pallet::storage] // --- MAP ( netuid, key ) --> prometheus_info
-	pub(super) type Prometheus<T:Config> = StorageDoubleMap<_, Identity, u16, Blake2_128Concat, T::AccountId, PrometheusInfoOf, OptionQuery>;
 
 	// =======================================
 	// ==== Subnetwork Hyperparam storage ====
@@ -333,8 +318,6 @@ pub mod pallet {
     pub type ModulesToPruneAtNextEpoch<T:Config> = StorageMap<_, Identity, u16, u16, ValueQuery>;
 	#[pallet::storage] // --- MAP ( netuid ) --> registrations_this_interval
 	pub type RegistrationsThisInterval<T:Config> = StorageMap<_, Identity, u16, u16, ValueQuery>;
-	#[pallet::storage] // --- MAP ( netuid ) --> burn_registrations_this_interval
-	pub type BurnRegistrationsThisInterval<T:Config> = StorageMap<_, Identity, u16, u16, ValueQuery>;
 	#[pallet::storage] // --- MAP ( netuid ) --> max_allowed_uids
 	pub type MaxAllowedUids<T> = StorageMap<_, Identity, u16, u16, ValueQuery, DefaultMaxAllowedUids<T> >;
 	#[pallet::storage] // --- MAP ( netuid ) --> immunity_period
@@ -372,10 +355,6 @@ pub mod pallet {
 	#[pallet::type_value] 
 	pub fn DefaultKey<T:Config>() -> T::AccountId { T::AccountId::decode(&mut sp_runtime::traits::TrailingZeroInput::zeroes()).unwrap() }
 
-	#[pallet::storage] // --- DMAP ( netuid, key ) --> uid
-	pub(super) type Uids<T:Config> = StorageDoubleMap<_, Identity, u16, Blake2_128Concat, T::AccountId, u16, OptionQuery>;
-	#[pallet::storage] // --- DMAP ( netuid, uid ) --> key
-	pub(super) type Keys<T:Config> = StorageDoubleMap<_, Identity, u16, Identity, u16, T::AccountId, ValueQuery, DefaultKey<T> >;
 	#[pallet::storage] // --- DMAP ( netuid ) --> emission
 	pub(super) type LoadedEmission<T:Config> = StorageMap< _, Identity, u16, Vec<(T::AccountId, u64)>, OptionQuery >;
 
@@ -383,10 +362,6 @@ pub mod pallet {
 	pub(super) type Active<T:Config> = StorageMap< _, Identity, u16, Vec<bool>, ValueQuery, EmptyBoolVec<T> >;
 	#[pallet::storage] // --- DMAP ( netuid ) --> rank
 	pub(super) type Rank<T:Config> = StorageMap< _, Identity, u16, Vec<u16>, ValueQuery, EmptyU16Vec<T>>;
-	#[pallet::storage] // --- DMAP ( netuid ) --> trust
-	pub(super) type Trust<T:Config> = StorageMap< _, Identity, u16, Vec<u16>, ValueQuery, EmptyU16Vec<T>>;
-	#[pallet::storage] // --- DMAP ( netuid ) --> consensus
-	pub(super) type Consensus<T:Config> = StorageMap< _, Identity, u16, Vec<u16>, ValueQuery, EmptyU16Vec<T>>;
 	#[pallet::storage] // --- DMAP ( netuid ) --> incentive
 	pub(super) type Incentive<T:Config> = StorageMap< _, Identity, u16, Vec<u16>, ValueQuery, EmptyU16Vec<T>>;
 	#[pallet::storage] // --- DMAP ( netuid ) --> dividends
@@ -399,6 +374,11 @@ pub mod pallet {
 	#[pallet::storage] // --- DMAP ( netuid ) --> pruning_scores
 	pub(super) type PruningScores<T:Config> = StorageMap< _, Identity, u16, Vec<u16>, ValueQuery, EmptyU16Vec<T> >;
 
+
+	#[pallet::storage] // --- DMAP ( netuid, key ) --> uid
+	pub(super) type Uids<T:Config> = StorageDoubleMap<_, Identity, u16, Blake2_128Concat, T::AccountId, u16, OptionQuery>;
+	#[pallet::storage] // --- DMAP ( netuid, uid ) --> key
+	pub(super) type Keys<T:Config> = StorageDoubleMap<_, Identity, u16, Identity, u16, T::AccountId, ValueQuery, DefaultKey<T> >;
 	#[pallet::storage] // --- DMAP ( netuid, uid ) --> weights
     pub(super) type Weights<T:Config> = StorageDoubleMap<_, Identity, u16, Identity, u16, Vec<(u16, u16)>, ValueQuery, DefaultWeights<T> >;
 	#[pallet::storage] // --- DMAP ( netuid, uid ) --> bonds
@@ -438,9 +418,6 @@ pub mod pallet {
 		DefaultTakeSet( u16 ), // --- Event created when the default take is set.
 		WeightsVersionKeySet( u16, u64 ), // --- Event created when weights version key is set for a network.
 		ServingRateLimitSet( u16, u64 ), // --- Event created when setting the prometheus serving rate limit.
-		BurnSet( u16, u64 ), // --- Event created when setting burn on a network.
-		MaxBurnSet( u16, u64 ), // --- Event created when setting max burn on a network.
-		MinBurnSet( u16, u64 ), // --- Event created when setting min burn on a network.
 		TxRateLimitSet( u64 ), // --- Event created when setting the transaction rate limit.
 	}
 
@@ -452,7 +429,6 @@ pub mod pallet {
 		InvalidIpType, // ---- Thrown when the user tries to serve an module which is not of type	4 (IPv4) or 6 (IPv6).
 		InvalidIpAddress, // --- Thrown when an invalid IP address is passed to the serve function.
 		NotRegistered, // ---- Thrown when the caller requests setting or removing data from a module which does not exist in the active set.
-		NonAssociatedColdKey, // ---- Thrown when a stake, unstake or subscribe request is made by a key which is not associated with the key account. 
 		NotEnoughStaketoWithdraw, // ---- Thrown when the caller requests removing more stake then there exists in the staking account. See: fn remove_stake.
 		NotEnoughBalanceToStake, //  ---- Thrown when the caller requests adding more stake than there exists in the cold key account. See: fn add_stake
 		BalanceWithdrawalError, // ---- Thrown when the caller tries to add stake, but for some reason the requested amount could not be withdrawn from the key account
@@ -528,7 +504,6 @@ pub mod pallet {
 
 			// Make network parameters explicit.
 			if !Tempo::<T>::contains_key( netuid ) { Tempo::<T>::insert( netuid, Tempo::<T>::get( netuid ));}
-			if !Kappa::<T>::contains_key( netuid ) { Kappa::<T>::insert( netuid, Kappa::<T>::get( netuid ));}
 			if !MaxAllowedUids::<T>::contains_key( netuid ) { MaxAllowedUids::<T>::insert( netuid, MaxAllowedUids::<T>::get( netuid ));}
 			if !ImmunityPeriod::<T>::contains_key( netuid ) { ImmunityPeriod::<T>::insert( netuid, ImmunityPeriod::<T>::get( netuid ));}
 			if !ActivityCutoff::<T>::contains_key( netuid ) { ActivityCutoff::<T>::insert( netuid, ActivityCutoff::<T>::get( netuid ));}
@@ -549,10 +524,8 @@ pub mod pallet {
 
 				// Expand Yuma Consensus with new position.
 				Rank::<T>::mutate(netuid, |v| v.push(0));
-				Trust::<T>::mutate(netuid, |v| v.push(0));
 				Active::<T>::mutate(netuid, |v| v.push(true));
 				Emission::<T>::mutate(netuid, |v| v.push(0));
-				Consensus::<T>::mutate(netuid, |v| v.push(0));
 				Incentive::<T>::mutate(netuid, |v| v.push(0));
 				Dividends::<T>::mutate(netuid, |v| v.push(0));
 				LastUpdate::<T>::mutate(netuid, |v| v.push(0));
@@ -705,9 +678,6 @@ pub mod pallet {
 		// 	* 'NotEnoughBalanceToStake':
 		// 		- Not enough balance on the key to add onto the global account.
 		//
-		// 	* 'NonAssociatedColdKey':
-		// 		- The calling key is not associated with this key.
-		//
 		// 	* 'BalanceWithdrawalError':
 		// 		- Errors stemming from transaction pallet.
 		//
@@ -741,9 +711,7 @@ pub mod pallet {
 		// 	* 'NotRegistered':
 		// 		- Thrown if the account we are attempting to unstake from is non existent.
 		//
-		// 	* 'NonAssociatedColdKey':
-		// 		- Thrown if the key does not own the key we are unstaking from.
-		//
+
 		// 	* 'NotEnoughStaketoWithdraw':
 		// 		- Thrown if there is not enough stake on the key to withdwraw this amount. 
 		//
@@ -844,7 +812,7 @@ pub mod pallet {
 		// 		- Vector encoded bytes representing work done.
 		//
 		// 	* 'key' ( T::AccountId ):
-		// 		- Hotkey to be registered to the network.
+		// 		- key to be registered to the network.
 		//
 		// 	* 'key' ( T::AccountId ):
 		// 		- Associated key account.
@@ -886,79 +854,9 @@ pub mod pallet {
 
 			Self::do_registration(origin, netuid)
 		}
-		#[pallet::weight((Weight::from_ref_time(89_000_000)
-		.saturating_add(T::DbWeight::get().reads(27))
-		.saturating_add(T::DbWeight::get().writes(22)), DispatchClass::Normal, Pays::No))]
-		pub fn burned_register( 
-				origin:OriginFor<T>, 
-				netuid: u16,
-				key: T::AccountId, 
-		) -> DispatchResult { 
-			ensure!( false, Error::<T>::RegistrationDisabled ); 
-
-			Self::do_burned_registration(origin, netuid)
-		}
-
 		// ---- SUDO ONLY FUNCTIONS ------------------------------------------------------------
 
-		// ---- Sudo add a network to the network set.
-		// # Args:
-		// 	* 'origin': (<T as frame_system::Config>Origin):
-		// 		- Must be sudo.
-		//
-		// 	* 'netuid' (u16):
-		// 		- The u16 network identifier.
-		//
-		// 	* 'tempo' ( u16 ):
-		// 		- Number of blocks between epoch step.
-		//
-		// # Event:
-		// 	* NetworkAdded;
-		// 		- On successfully creation of a network.
-		//
-		// # Raises:
-		// 	* 'NetworkExist':
-		// 		- Attempting to register an already existing.
-		//
-		// 	* 'InvalidTempo':
-		// 		- Attempting to register a network with an invalid tempo.
-		//
-		#[pallet::weight((Weight::from_ref_time(50_000_000)
-		.saturating_add(T::DbWeight::get().reads(17))
-		.saturating_add(T::DbWeight::get().writes(20)), DispatchClass::Operational, Pays::No))]
-		pub fn sudo_add_network(
-			origin: OriginFor<T>,
-			netuid: u16,
-			tempo: u16,
-		) -> DispatchResultWithPostInfo {
-			Self::do_add_network(origin, netuid, tempo)
-		}
 
-		// ---- Sudo remove a network from the network set.
-		// # Args:
-		// 	* 'origin': (<T as frame_system::Config>Origin):
-		// 		- Must be sudo.
-		//
-		// 	* 'netuid' (u16):
-		// 		- The u16 network identifier.
-		//
-		// # Event:
-		// 	* NetworkRemoved;
-		// 		- On the successfull removing of this network.
-		//
-		// # Raises:
-		// 	* 'NetworkDoesNotExist':
-		// 		- Attempting to remove a non existent network.
-		//
-		#[pallet::weight((Weight::from_ref_time(42_000_000)
-		.saturating_add(T::DbWeight::get().reads(2))
-		.saturating_add(T::DbWeight::get().writes(31)), DispatchClass::Operational, Pays::No))]
-		pub fn sudo_remove_network(
-			origin: OriginFor<T>,
-			netuid: u16
-		) -> DispatchResult {
-			Self::do_remove_network(origin, netuid)
-		} 
 
 		// ---- Sudo set emission values for all networks.
 		// Args:
@@ -1018,35 +916,6 @@ pub mod pallet {
 			Self::do_sudo_set_tx_rate_limit( origin, tx_rate_limit )
 		}
 
-		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
-		pub fn sudo_set_max_burn( origin:OriginFor<T>, netuid: u16, max_burn: u64 ) -> DispatchResult {  
-			Self::do_sudo_set_max_burn( origin, netuid, max_burn )
-		}
-		#[pallet::weight((Weight::from_ref_time(13_000_000)
-		.saturating_add(T::DbWeight::get().reads(1))
-		.saturating_add(T::DbWeight::get().writes(1)), DispatchClass::Operational, Pays::No))]
-		pub fn sudo_set_min_burn( origin:OriginFor<T>, netuid: u16, min_burn: u64 ) -> DispatchResult {  
-			Self::do_sudo_set_min_burn( origin, netuid, min_burn )
-		}
-		#[pallet::weight((Weight::from_ref_time(14_000_000)
-		.saturating_add(T::DbWeight::get().reads(1))
-		.saturating_add(T::DbWeight::get().writes(1)), DispatchClass::Operational, Pays::No))]
-		pub fn sudo_set_burn( origin:OriginFor<T>, netuid: u16, burn: u64 ) -> DispatchResult {  
-			Self::do_sudo_set_burn( origin, netuid, burn )
-		}
-
-		#[pallet::weight((Weight::from_ref_time(14_000_000)
-		.saturating_add(T::DbWeight::get().reads(1))
-		.saturating_add(T::DbWeight::get().writes(1)), DispatchClass::Operational, Pays::No))]
-		pub fn sudo_set_max_difficulty( origin:OriginFor<T>, netuid: u16, max_difficulty: u64 ) -> DispatchResult {  
-			Self::do_sudo_set_max_difficulty( origin, netuid, max_difficulty )
-		}
-		#[pallet::weight((Weight::from_ref_time(14_000_000)
-		.saturating_add(T::DbWeight::get().reads(1))
-		.saturating_add(T::DbWeight::get().writes(1)), DispatchClass::Operational, Pays::No))]
-		pub fn sudo_set_min_difficulty( origin:OriginFor<T>, netuid: u16, min_difficulty: u64 ) -> DispatchResult {  
-			Self::do_sudo_set_min_difficulty( origin, netuid, min_difficulty )
-		}
 		#[pallet::weight((Weight::from_ref_time(15_000_000)
 		.saturating_add(T::DbWeight::get().reads(1))
 		.saturating_add(T::DbWeight::get().writes(1)), DispatchClass::Operational, Pays::No))]
@@ -1089,18 +958,7 @@ pub mod pallet {
 		pub fn sudo_set_activity_cutoff( origin:OriginFor<T>, netuid: u16, activity_cutoff: u16 ) -> DispatchResult {
 			Self::do_sudo_set_activity_cutoff( origin, netuid, activity_cutoff )
 		}
-		#[pallet::weight((Weight::from_ref_time(14_000_000)
-		.saturating_add(T::DbWeight::get().reads(1))
-		.saturating_add(T::DbWeight::get().writes(1)), DispatchClass::Operational, Pays::No))]
-		pub fn sudo_set_rho( origin:OriginFor<T>, netuid: u16, rho: u16 ) -> DispatchResult {
-			Self::do_sudo_set_rho( origin, netuid, rho )
-		}
-		#[pallet::weight((	Weight::from_ref_time(14_000_000)
-		.saturating_add(T::DbWeight::get().reads(1))
-		.saturating_add(T::DbWeight::get().writes(1)), DispatchClass::Operational, Pays::No))]
-		pub fn sudo_set_kappa( origin:OriginFor<T>, netuid: u16, kappa: u16 ) -> DispatchResult {
-			Self::do_sudo_set_kappa( origin, netuid, kappa )
-		}
+
 		#[pallet::weight((Weight::from_ref_time(18_000_000)
 		.saturating_add(T::DbWeight::get().reads(2))
 		.saturating_add(T::DbWeight::get().writes(1)), DispatchClass::Operational, Pays::No))]
@@ -1154,14 +1012,13 @@ pub mod pallet {
 		pub fn create_network_with_weights( _: OriginFor<T>, netuid: u16, n: u16, tempo: u16, n_vals: u16, n_weights: u16 ) -> DispatchResult {
 			Self::init_new_network( netuid, tempo, 1 );
 			Self::set_max_allowed_uids( netuid, n );
-			Self::set_max_allowed_validators( netuid, n_vals );
 			Self::set_min_allowed_weights( netuid, n_weights );
 			Self::set_emission_for_network( netuid, 1_000_000_000 );
 			let mut seed : u32 = 1;
 			for _ in 0..n {
 				let block_number: u64 = Self::get_current_block_as_u64();
 				let key: T::AccountId = T::AccountId::decode(&mut sp_runtime::traits::TrailingZeroInput::zeroes()).unwrap();
-				Self::increase_stake_on_coldkey_key_account( &key, &key, 1_000_000_000 );
+				Self::increase_stake_on_account( &key, 1_000_000_000 );
 				Self::append_module( netuid, &key, block_number );
 				seed = seed + 1;
 			}
@@ -1339,7 +1196,7 @@ impl<T: Config + Send + Sync + TypeInfo> SignedExtension for SubspaceSignedExten
 
         match call.is_sub_type() {
             Some(Call::add_stake{..}) => {
-				let transaction_fee = 100000;
+				let transaction_fee = 0;
                 Ok((CallType::AddStake, transaction_fee, who.clone()))
             }
             Some(Call::remove_stake{..}) => {

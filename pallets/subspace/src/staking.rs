@@ -168,15 +168,10 @@ impl<T: Config> Pallet<T> {
 
     // Returns the stake under the cold - hot pairing in the staking table.
     //
-    pub fn get_stake_for_account( key: &T::AccountId, key: &T::AccountId ) -> u64 { 
+    pub fn get_stake_for_account( key: &T::AccountId) -> u64 { 
         return Stake::<T>::get( key );
     }
 
-    // Returns the key owning this key. This function should only be called for active accounts.
-    //
-    pub fn get_owning_for_key( key: &T::AccountId ) ->  T::AccountId { 
-        return Owner::<T>::get( key );
-    }
 
     // Returns true if the key account has been created.
     //
@@ -188,7 +183,7 @@ impl<T: Config> Pallet<T> {
     // Returns true if the cold-hot staking account has enough balance to fufil the decrement.
     //
     pub fn has_enough_stake( key: &T::AccountId, decrement: u64 ) -> bool {
-        return Self::get_stake_key( key ) >= decrement;
+        return Self::get_stake_for_account( key ) >= decrement;
     }
 
 

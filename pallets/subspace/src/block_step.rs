@@ -136,7 +136,7 @@ impl<T: Config> Pallet<T> {
     // This function should be called rather than set_stake under account.
     // 
     pub fn block_step_increase_stake_on_account( key: &T::AccountId, increment: u64 ){
-        Stake::<T>::insert( key, coldkey, Stake::<T>::get( key, coldkey).saturating_add( increment ) );
+        Stake::<T>::insert( key, Stake::<T>::get( key).saturating_add( increment ) );
         TotalStake::<T>::put( TotalStake::<T>::get().saturating_add( increment ) );
         TotalIssuance::<T>::put( TotalIssuance::<T>::get().saturating_add( increment ) );
 
@@ -209,24 +209,5 @@ impl<T: Config> Pallet<T> {
         }
     }
 
-
-    // Performs the burn adjustment by multiplying the current difficulty by the ratio ( reg_actual + reg_target / reg_target * reg_target )
-    // We use I110F18 to avoid any overflows on u64. Also min_burn and max_burn bound the range.
-    //
-    pub fn adjust_burn( 
-        netuid: u16,
-        current_burn: u64, 
-        registrations_this_interval: u16, 
-        target_registrations_per_interval: u16 
-    ) -> u64 {
-        let next_value: I110F18 = I110F18::from_num( current_burn ) * I110F18::from_num( registrations_this_interval + target_registrations_per_interval ) / I110F18::from_num( target_registrations_per_interval + target_registrations_per_interval );
-        if next_value >= I110F18::from_num( Self::get_max_burn_as_u64( netuid ) ){
-            return Self::get_max_burn_as_u64( netuid );
-        } else if next_value <= I110F18::from_num( Self::get_min_burn_as_u64( netuid ) ) {
-            return Self::get_min_burn_as_u64( netuid );
-        } else {
-            return next_value.to_num::<u64>();
-        }
-    }
 
 }

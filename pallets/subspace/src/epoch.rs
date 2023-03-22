@@ -313,15 +313,6 @@ impl<T: Config> Pallet<T> {
         let preranks: Vec<I32F32> = matmul_sparse( &weights, &active_stake, n );
         // log::trace!( "R (before): {:?}", &preranks );
 
-        // Clip weights at majority consensus
-        let kappa: I32F32 = Self::get_float_kappa( netuid );  // consensus majority ratio, e.g. 51%.
-        let consensus: Vec<I32F32> = weighted_median_col_sparse( &active_stake, &weights, n, kappa );
-        log::trace!( "C: {:?}", &consensus );
-
-        weights = col_clip_sparse( &weights, &consensus );
-        // log::trace!( "W: {:?}", &weights );
-
-
         // =============================
         // == Ranks, Trust, Incentive ==
         // =============================
@@ -355,25 +346,21 @@ impl<T: Config> Pallet<T> {
         // log::trace!( "B (mask+norm): {:?}", &bonds );
 
         // Compute bonds delta column normalized.
-        let mut bonds_delta: Vec<Vec<(u16, I32F32)>> = row_hadamard_sparse( &weights, &active_stake ); // ΔB = W◦S (outdated W masked)
+        let mut bonds: Vec<Vec<(u16, I32F32)>> = row_hadamard_sparse( &weights, &active_stake ); // ΔB = W◦S (outdated W masked)
         // log::trace!( "ΔB: {:?}", &bonds_delta );
 
         // Normalize bonds delta.
-        inplace_col_normalize_sparse( &mut bonds_delta, n ); // sum_i b_ij = 1
+        inplace_col_normalize_sparse( &mut bonds, n ); // sum_i b_ij = 1
         // log::trace!( "ΔB (norm): {:?}", &bonds_delta );
     
-        // Compute bonds moving average.
-        let bonds_moving_average: I64F64 = I64F64::from_num( Self::get_bonds_moving_average( netuid ) ) / I64F64::from_num( 1_000_000 );
-        let alpha: I32F32 = I32F32::from_num(1) - I32F32::from_num( bonds_moving_average );
-        let mut ema_bonds: Vec<Vec<(u16, I32F32)>> = mat_ema_sparse( &bonds_delta, &bonds, alpha );
 
         // Normalize EMA bonds.
-        inplace_col_normalize_sparse( &mut ema_bonds, n ); // sum_i b_ij = 1
+        inplace_col_normalize_sparse( &mut bonds, n ); // sum_i b_ij = 1
         // log::trace!( "emaB: {:?}", &ema_bonds );
 
         // Compute dividends: d_i = SUM(j) b_ij * inc_j.
         // range: I32F32(0, 1)
-        let mut dividends: Vec<I32F32> = matmul_transpose_sparse( &ema_bonds, &incentive );
+        let mut dividends: Vec<I32F32> = matmul_transpose_sparse( &bonds, &incentive );
         inplace_normalize( &mut dividends );
         log::trace!( "D: {:?}", &dividends );
 
@@ -419,8 +406,6 @@ impl<T: Config> Pallet<T> {
         Active::<T>::insert( netuid, active.clone() );
         Emission::<T>::insert( netuid, cloned_emission );
         Rank::<T>::insert( netuid, cloned_ranks);
-        Trust::<T>::insert( netuid, cloned_trust);
-        Consensus::<T>::insert( netuid, cloned_consensus );
         Incentive::<T>::insert( netuid, cloned_incentive );
         Dividends::<T>::insert( netuid, cloned_dividends );
         PruningScores::<T>::insert( netuid, cloned_pruning_scores );
