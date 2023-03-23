@@ -161,8 +161,6 @@ pub mod pallet {
 	#[pallet::type_value] 
 	pub fn DefaultMaxRegistrationsPerBlock<T: Config>() -> u16 { T::InitialMaxRegistrationsPerBlock::get() }
 
-	#[pallet::storage] // ---- StorageItem Global Used Work.
-    pub type UsedWork<T:Config> = StorageMap<_, Identity, Vec<u8>, u64, ValueQuery>;
 	#[pallet::storage] // --- MAP ( netuid ) -->  Block at last adjustment.
 	pub type LastAdjustmentBlock<T> = StorageMap<_, Identity, u16, u64, ValueQuery, DefaultLastAdjustmentBlock<T> >;
 	#[pallet::storage] // --- MAP ( netuid ) --> Registration this Block.
@@ -399,9 +397,6 @@ pub mod pallet {
 		NotSettingEnoughWeights, // ---- Thrown when the dispatch attempts to set weights on chain with fewer elements than are allowed.
 		TooManyRegistrationsThisBlock, // ---- Thrown when registrations this block exceeds allowed number.
 		AlreadyRegistered, // ---- Thrown when the caller requests registering a module which already exists in the active set.
-		InvalidWorkBlock, // ---- Thrown if the supplied pow hash block is in the future or negative
-		WorkRepeated, // ---- Thrown when the caller attempts to use a repeated work.
-		InvalidSeal, // ---- Thrown if the supplied pow hash seal does not match the supplied work.
 		MaxAllowedUIdsNotAllowed, // ---  Thrown if the vaule is invalid for MaxAllowedUids
 		CouldNotConvertToBalance, // ---- Thrown when the dispatch attempts to convert between a u64 and T::balance but the call fails.
 		StakeAlreadyAdded, // --- Thrown when the caller requests adding stake for a key to the total stake which already added
@@ -791,16 +786,7 @@ pub mod pallet {
 		// 	* 'AlreadyRegistered':
 		// 		- The key is already registered on this network.
 		//
-		// 	* 'InvalidWorkBlock':
-		// 		- The work has been performed on a stale, future, or non existent block.
-		//
-		// 	* 'WorkRepeated':
-		// 		- This work for block has already been used.
-		//
 
-		// 	* 'InvalidSeal':
-		// 		- The seal is incorrect.
-		//
 		
 		#[pallet::weight((Weight::from_ref_time(91_000_000)
 		.saturating_add(T::DbWeight::get().reads(27))

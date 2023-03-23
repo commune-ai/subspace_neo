@@ -115,7 +115,6 @@ benchmarks! {
     let caller: T::AccountId = whitelisted_caller::<AccountIdOf<T>>(); 
     let caller_origin = <T as frame_system::Config>::RuntimeOrigin::from(RawOrigin::Signed(caller.clone()));
     let netuid: u16 = 1;
-    let version_key: u64 = 1;
     let tempo: u16 = 1;
     
    
@@ -147,14 +146,13 @@ benchmarks! {
       weights.push(id.clone());
     }
 
-  }: set_weights(RawOrigin::Signed( signer.clone() ), netuid, dests, weights, version_key)
+  }: set_weights(RawOrigin::Signed( signer.clone() ), netuid, dests, weights)
 
 
   benchmark_add_stake {
     let caller: T::AccountId = whitelisted_caller::<AccountIdOf<T>>(); 
     let caller_origin = <T as frame_system::Config>::RuntimeOrigin::from(RawOrigin::Signed(caller.clone()));
     let netuid: u16 = 1;
-    let version_key: u64 = 1;
     let tempo: u16 = 1;
     
 
@@ -178,7 +176,6 @@ benchmarks! {
     let caller: T::AccountId = whitelisted_caller::<AccountIdOf<T>>(); 
     let caller_origin = <T as frame_system::Config>::RuntimeOrigin::from(RawOrigin::Signed(caller.clone()));
     let netuid: u16 = 1;
-    let version_key: u64 = 1;
     let tempo: u16 = 1;
     
 
@@ -296,15 +293,6 @@ benchmarks! {
 
   }: sudo_set_weights_set_rate_limit(RawOrigin::<AccountIdOf<T>>::Root, netuid, weights_set_rate_limit)
 
-  benchmark_sudo_set_weights_version_key {
-    let netuid: u16 = 1; 
-    let weights_version_key: u64 = 1;
-    let tempo: u16 = 1;
-    
-
-    assert_ok!( Subspace::<T>::do_add_network( RawOrigin::Root.into(), netuid.try_into().unwrap(), tempo.into()));
-
-  }: sudo_set_weights_version_key(RawOrigin::<AccountIdOf<T>>::Root, netuid, weights_version_key)
 
   benchmark_sudo_set_bonds_moving_average {
     let netuid: u16 = 1;
@@ -357,25 +345,6 @@ benchmarks! {
 
   }: sudo_set_activity_cutoff(RawOrigin::<AccountIdOf<T>>::Root, netuid, activity_cutoff)
 
-  benchmark_sudo_set_rho {
-    let netuid: u16 = 1;
-    let tempo: u16 = 1;
-    
-    let rho: u16 = 300;
-
-    assert_ok!( Subspace::<T>::do_add_network( RawOrigin::Root.into(), netuid.try_into().unwrap(), tempo.into()));
-
-  }: sudo_set_rho(RawOrigin::<AccountIdOf<T>>::Root, netuid, rho)
-
-  benchmark_sudo_set_kappa {
-    let netuid: u16 = 1;
-    let tempo: u16 = 1;
-    
-    let kappa: u16 = 3;
-
-    assert_ok!( Subspace::<T>::do_add_network( RawOrigin::Root.into(), netuid.try_into().unwrap(), tempo.into()));
-
-  }: sudo_set_kappa(RawOrigin::<AccountIdOf<T>>::Root, netuid, kappa)
 
   benchmark_sudo_set_max_allowed_uids {
     let netuid: u16 = 1;
@@ -428,48 +397,6 @@ benchmarks! {
 
   }: sudo_set_max_registrations_per_block(RawOrigin::<AccountIdOf<T>>::Root, netuid, max_registrations_per_block)
 
-  benchmark_burned_register {
-    let netuid: u16 = 1;
-    let mut seed : u32 = 1;
-    let key: T::AccountId = account("Alice", 0, seed);
-    let coldkey: T::AccountId = account("Test", 0, seed);
-    
-    let tempo: u16 = 1;
-    assert_ok!( Subspace::<T>::do_add_network( RawOrigin::Root.into(), netuid.try_into().unwrap(), tempo.into()));
 
-    let amoun_to_be_staked = Subspace::<T>::u64_to_balance( 1000000);
-    Subspace::<T>::add_balance_to_coldkey_account(&coldkey.clone(), amoun_to_be_staked.unwrap());
 
-  }: burned_register(RawOrigin::Signed( coldkey.clone() ), netuid, key)
-
-  benchmark_sudo_set_burn {
-    let netuid: u16 = 1;
-    let tempo: u16 = 1;
-    
-    let burn: u64 = 10;
-
-    assert_ok!( Subspace::<T>::do_add_network( RawOrigin::Root.into(), netuid.try_into().unwrap(), tempo.into()));
-
-  }: sudo_set_burn(RawOrigin::<AccountIdOf<T>>::Root, netuid, burn)
-
-  benchmark_sudo_set_max_burn {
-    let netuid: u16 = 1;
-    let tempo: u16 = 1;
-    
-    let max_burn: u64 = 10;
-
-    assert_ok!( Subspace::<T>::do_add_network( RawOrigin::Root.into(), netuid.try_into().unwrap(), tempo.into()));
-
-  }: sudo_set_max_burn(RawOrigin::<AccountIdOf<T>>::Root, netuid, max_burn)
-
-  benchmark_sudo_set_min_burn {
-    let netuid: u16 = 1;
-    let tempo: u16 = 1;
-    
-    let min_burn: u64 = 10;
-
-    assert_ok!( Subspace::<T>::do_add_network( RawOrigin::Root.into(), netuid.try_into().unwrap(), tempo.into()));
-
-  }: sudo_set_min_burn(RawOrigin::<AccountIdOf<T>>::Root, netuid, min_burn)
-}
 
