@@ -4,13 +4,13 @@ use sp_std::vec::Vec;
 use frame_system::ensure_root;
 use frame_support::storage::IterableStorageMap;
 use frame_support::pallet_prelude::{Decode, Encode};
-extern crate alloc;
-use alloc::vec::Vec;
+// extern crate alloc;
+// use alloc::vec::Vec;
 use codec::Compact;
 
 
 #[derive(Decode, Encode, PartialEq, Eq, Clone, Debug)]
-pub struct Network {
+pub struct NetworkInfo {
     netuid: Compact<u16>,
     immunity_period: Compact<u16>,
     max_allowed_validators: Compact<u16>,
@@ -174,7 +174,7 @@ impl<T: Config> Pallet<T> {
     pub fn init_new_network( netuid:u16, tempo:u16 ){
 
         // --- 1. Set network to 0 size.
-        NetworkworkN::<T>::insert( netuid, 0 );
+        NetworkN::<T>::insert( netuid, 0 );
 
         // --- 2. Set this network uid to alive.
         NetworksAdded::<T>::insert( netuid, true );
@@ -194,7 +194,7 @@ impl<T: Config> Pallet<T> {
     pub fn remove_network( netuid:u16 ) {
 
         // --- 1. Remove network count.
-        NetworkworkN::<T>::remove( netuid );
+        NetworkN::<T>::remove( netuid );
 
 
         // --- 3. Remove netuid from added networks.
@@ -302,7 +302,7 @@ impl<T: Config> Pallet<T> {
         tempo < u16::MAX
     }
 
-    pub fn get_network(netuid: u16) -> Option<Network> {
+    pub fn get_network(netuid: u16) -> Option<NetworkInfo> {
         if !Self::if_network_exist(netuid) {
             return None;
         }
@@ -324,7 +324,7 @@ impl<T: Config> Pallet<T> {
             network_connect.push([_netuid_, con_req]);
         }
 
-        return Some(Network {
+        return Some(NetworkInfo {
             immunity_period: immunity_period.into(),
             netuid: netuid.into(),
             min_allowed_weights: min_allowed_weights.into(),
@@ -338,7 +338,7 @@ impl<T: Config> Pallet<T> {
         })
     }
 
-    pub fn get_networks() -> Vec<Option<Network>> {
+    pub fn get_networks() -> Vec<Option<NetworkInfo>> {
         let mut network_netuids = Vec::<u16>::new();
         let mut max_netuid: u16 = 0;
         for ( netuid, added ) in < NetworksAdded<T> as IterableStorageMap<u16, bool> >::iter() {
@@ -350,7 +350,7 @@ impl<T: Config> Pallet<T> {
             }
         }
 
-        let mut networks = Vec::<Option<Network>>::new();
+        let mut networks = Vec::<Option<NetworkInfo>>::new();
         for netuid_ in 0..(max_netuid + 1) {
             if network_netuids.contains(&netuid_) {
                 networks.push(Self::get_network(netuid_));
@@ -366,15 +366,14 @@ impl<T: Config> Pallet<T> {
     //
     pub fn get_number_of_networks()-> u16 {
         let mut number_of_networks : u16 = 0;
-        for (_, _)  in <NetworkworkN<T> as IterableStorageMap<u16, u16>>::iter(){
+        for (_, _)  in <NetworkN<T> as IterableStorageMap<u16, u16>>::iter(){
             number_of_networks = number_of_networks + 1;
         }
         return number_of_networks;
     }
 
-    }
-
-
-    
-    
 }
+
+
+    
+    

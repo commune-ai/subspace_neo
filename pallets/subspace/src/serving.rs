@@ -153,11 +153,11 @@ impl<T: Config> Pallet<T> {
     }
 
 
-    pub fn get_module_from_key( netuid: u16, key: &T::AccountId ) -> Module {
+    pub fn get_module_from_key( netuid: u16, key: &T::AccountId ) -> ModuleInfo {
         if Self::has_module( netuid, key ) {
             return Modules::<T>::get( netuid, key ).unwrap();
         } else{
-            return Module { 
+            return ModuleInfo { 
                 block: 0,
                 version: 0,
                 ip: 0,

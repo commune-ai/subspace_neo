@@ -127,7 +127,6 @@ impl<T: Config> Pallet<T> {
 
         }
 
-    }
 
 
     // Adjusts the network difficulties of every active network. Reseting state parameters.

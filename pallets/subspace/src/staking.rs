@@ -54,7 +54,6 @@ impl<T: Config> Pallet<T> {
         ensure!( Self::can_remove_balance_from_account( &key, stake_as_balance.unwrap() ), Error::<T>::NotEnoughBalanceToStake );
 
         // --- 4. Ensure that the key account exists this is only possible through registration.
-        ensure!( Self::key_account_exists( &key ), Error::<T>::NotRegistered );    
 
         // --- 6. Ensure the remove operation from the key is a success.
         ensure!( Self::remove_balance_from_account( &key, stake_as_balance.unwrap() ) == true, Error::<T>::BalanceWithdrawalError );
@@ -110,7 +109,6 @@ impl<T: Config> Pallet<T> {
         log::info!("do_remove_stake( key:{:?}, amount:{:?} )", key, amount );
 
         // --- 2. Ensure that the key account exists this is only possible through registration.
-        ensure!( Self::key_account_exists( &key ), Error::<T>::NotRegistered );    
 
         // --- 3. Ensure that the key has enough stake to withdraw.
         ensure!( Self::has_enough_stake( &key, amount ), Error::<T>::NotEnoughStaketoWithdraw );
@@ -174,11 +172,6 @@ impl<T: Config> Pallet<T> {
     }
 
 
-    // Returns true if the key account has been created.
-    //
-    pub fn key_account_exists( key: &T::AccountId ) -> bool {
-		return Owner::<T>::contains_key( key );
-    }
 
 
     // Returns true if the cold-hot staking account has enough balance to fufil the decrement.

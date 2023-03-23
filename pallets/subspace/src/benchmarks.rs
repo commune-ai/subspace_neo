@@ -186,7 +186,7 @@ benchmarks! {
 
     let key: T::AccountId = account("Alice", 0, seed);
 
-    assert_ok!( Subspace::<T>::do_registration(RawOrigin::Signed( key.clone() ).into(), netuid.try_into().unwrap());
+    assert_ok!( Subspace::<T>::do_registration(RawOrigin::Signed( key.clone() ).into(), netuid.try_into().unwrap()));
 
     let amoun_to_be_staked = Subspace::<T>::u64_to_balance( 1000000000);
     Subspace::<T>::add_balance_to_account(&key.clone(), amoun_to_be_staked.unwrap());
@@ -252,11 +252,6 @@ benchmarks! {
 
   }: sudo_set_serving_rate_limit(RawOrigin::<AccountIdOf<T>>::Root, netuid, serving_rate_limit)
 
-
-
-    assert_ok!( Subspace::<T>::do_add_network( RawOrigin::Root.into(), netuid.try_into().unwrap(), tempo.into()));
-
-  }: 
 
 
   benchmark_sudo_set_weights_set_rate_limit {
@@ -374,5 +369,6 @@ benchmarks! {
   }: sudo_set_max_registrations_per_block(RawOrigin::<AccountIdOf<T>>::Root, netuid, max_registrations_per_block)
 
 
+}
 
 

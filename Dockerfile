@@ -32,12 +32,12 @@ COPY . .
 # Update to nightly toolchain
 RUN ./scripts/init.sh
 
-# Cargo build
-RUN cargo build --release --features runtime-benchmarks --locked
-EXPOSE 30333 9933 9944
+# # Cargo build
+# RUN cargo build --release --features runtime-benchmarks --locked
+# EXPOSE 30333 9933 9944
 
-FROM $BASE_IMAGE
-COPY --from=builder /subspace/snapshot.json /
-COPY --from=builder /subspace/target/release/node-subspace /
-COPY --from=builder /subspace/raw_spec.json .
+# FROM $BASE_IMAGE
+# COPY --from=builder /subspace/snapshot.json /
+# COPY --from=builder /subspace/target/release/node-subspace /
+# COPY --from=builder /subspace/raw_spec.json .
 

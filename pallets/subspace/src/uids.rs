@@ -10,7 +10,7 @@ impl<T: Config> Pallet<T> {
     // Returns the number of filled slots on a network.
     ///
     pub fn get_network_n( netuid:u16 ) -> u16 { 
-        return NetworkworkN::<T>::get( netuid ) 
+        return NetworkN::<T>::get( netuid ) 
     }
 
     // Replace the module under this uid.
@@ -42,11 +42,10 @@ impl<T: Config> Pallet<T> {
         log::debug!("append_module( netuid: {:?} | next_uid: {:?} | new_key: {:?} ) ", netuid, new_key, next_uid );
 
         // 2. Get and increase the uid count.
-        NetworkworkN::<T>::insert( netuid, next_uid + 1 );
+        NetworkN::<T>::insert( netuid, next_uid + 1 );
 
         // 3. Expand Yuma Consensus with new position.
         Rank::<T>::mutate(netuid, |v| v.push(0) );
-        Trust::<T>::mutate(netuid, |v| v.push(0) );
         Active::<T>::mutate(netuid, |v| v.push( true ) );
         Emission::<T>::mutate(netuid, |v| v.push(0) );
         Incentive::<T>::mutate(netuid, |v| v.push(0) );

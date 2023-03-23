@@ -126,7 +126,8 @@ impl<T: Config> Pallet<T> {
             let immunity_period: u64 = Self::get_immunity_period(netuid) as u64;
             // Find min pruning score.
             if min_score >= pruning_score { 
-                if current_block - block_at_registration <  immunity_period;  { //module is in immunity period
+                if current_block - block_at_registration <  immunity_period
+                  { //module is in immunity period
                     if min_score_in_immunity_period > pruning_score {
                         min_score_in_immunity_period = pruning_score; 
                         uid_with_min_score_in_immunity_period = module_uid_i;

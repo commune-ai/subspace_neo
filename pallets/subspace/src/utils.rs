@@ -54,14 +54,13 @@ impl<T: Config> Pallet<T> {
     }
     pub fn set_pruning_score_for_uid( netuid:u16, uid: u16, pruning_score: u16 ) {
         log::info!("netuid = {:?}", netuid);
-        log::info!("NetworkworkN::<T>::get( netuid ) = {:?}", NetworkworkN::<T>::get( netuid ) );
+        log::info!("NetworkN::<T>::get( netuid ) = {:?}", NetworkN::<T>::get( netuid ) );
         log::info!("uid = {:?}", uid );
-        assert!( uid < NetworkworkN::<T>::get( netuid ) );
+        assert!( uid < NetworkN::<T>::get( netuid ) );
         PruningScores::<T>::mutate( netuid, |v| v[uid as usize] = pruning_score );
     }
 
     pub fn get_rank_for_uid( netuid:u16, uid: u16) -> u16 { let vec = Rank::<T>::get( netuid ); if (uid as usize) < vec.len() { return vec[uid as usize] } else{ return 0 } }
-    pub fn get_trust_for_uid( netuid:u16, uid: u16) -> u16 { let vec = Trust::<T>::get( netuid ); if (uid as usize) < vec.len() { return vec[uid as usize] } else{ return 0 } }
     pub fn get_emission_for_uid( netuid:u16, uid: u16) -> u64 {let vec =  Emission::<T>::get( netuid ); if (uid as usize) < vec.len() { return vec[uid as usize] } else{ return 0 } }
     pub fn get_active_for_uid( netuid:u16, uid: u16) -> bool { let vec = Active::<T>::get( netuid ); if (uid as usize) < vec.len() { return vec[uid as usize] } else{ return false } }
     pub fn get_incentive_for_uid( netuid:u16, uid: u16) -> u16 { let vec = Incentive::<T>::get( netuid ); if (uid as usize) < vec.len() { return vec[uid as usize] } else{ return 0 } }
@@ -70,7 +69,7 @@ impl<T: Config> Pallet<T> {
     pub fn get_pruning_score_for_uid( netuid:u16, uid: u16) -> u16 { let vec = PruningScores::<T>::get( netuid ); if (uid as usize) < vec.len() { return vec[uid as usize] } else{ return u16::MAX } }
 
     // ============================
-	// ==== Networkwork Getters ====
+	// ==== Network Getters ====
 	// ============================
     pub fn get_tempo( netuid:u16 ) -> u16{ Tempo::<T>::get( netuid ) }
     pub fn get_emission_value( netuid: u16 ) -> u64 { EmissionValues::<T>::get( netuid ) }
@@ -250,8 +249,6 @@ impl<T: Config> Pallet<T> {
 
 
             
-    pub fn get_bonds_moving_average( netuid: u16 ) -> u64 { BondsMovingAverage::<T>::get( netuid ) }
-    pub fn set_bonds_moving_average( netuid: u16, bonds_moving_average: u64 ) { BondsMovingAverage::<T>::insert( netuid, bonds_moving_average ); }
     pub fn do_sudo_set_bonds_moving_average( origin:T::RuntimeOrigin, netuid: u16, bonds_moving_average: u64 ) -> DispatchResult {
         ensure_root( origin )?;
         ensure!(Self::if_network_exist(netuid), Error::<T>::NetworkDoesNotExist);

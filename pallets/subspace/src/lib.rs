@@ -3,6 +3,7 @@
 // Edit this file to define custom logic or remove it if it is not needed.
 // Learn more about FRAME and the core library of Substrate FRAME pallets:
 // <https://docs.substrate.io/reference/frame-pallets/>
+
 pub use pallet::*;
 
 use frame_system::{
@@ -53,7 +54,6 @@ mod benchmarks;
 //	==== Pallet Imports =====
 // =========================
 mod block_step;
-
 mod epoch;
 mod math;
 mod network;
@@ -152,7 +152,7 @@ pub mod pallet {
     pub type TotalKeyStake<T:Config> = StorageMap<_, Identity, T::AccountId, u64, ValueQuery, DefaultAccountTake<T>>;
 
 	#[pallet::storage] // --- DMAP ( key ) --> stake | Returns the stake under a key prefixed by key.
-    pub type Stake<T:Config> = StorageMap<_, Blake2_128Concat, T::AccountId, u64, ValueQuery, DefaultDefaultTake<T>>;
+    pub type Stake<T:Config> = StorageMap<_, Blake2_128Concat, T::AccountId, u64, ValueQuery, DefaultAccountTake<T>>;
 
 	#[pallet::type_value] 
 	pub fn DefaultLastAdjustmentBlock<T: Config>() -> u64 { 0 }
@@ -169,7 +169,7 @@ pub mod pallet {
 	pub type MaxRegistrationsPerBlock<T> = StorageMap<_, Identity, u16, u16, ValueQuery, DefaultMaxRegistrationsPerBlock<T> >;
 
 	// ==============================
-	// ==== Networkworks Storage =====
+	// ==== Networks Storage =====
 	// ==============================
 	#[pallet::type_value] 
 	pub fn DefaultN<T:Config>() -> u16 { 0 }
@@ -182,7 +182,7 @@ pub mod pallet {
 	#[pallet::storage] // --- ITEM( tota_number_of_existing_networks )
 	pub type TotalNetworks<T> = StorageValue<_, u16, ValueQuery>;
 	#[pallet::storage] // --- MAP ( netuid ) --> network_n (Number of UIDs in the network).
-	pub type NetworkworkN<T:Config> = StorageMap< _, Identity, u16, u16, ValueQuery, DefaultN<T> >;
+	pub type NetworkN<T:Config> = StorageMap< _, Identity, u16, u16, ValueQuery, DefaultN<T> >;
 	#[pallet::storage] // --- MAP ( netuid ) --> network_is_added
 	pub type NetworksAdded<T:Config> = StorageMap<_, Identity, u16, bool, ValueQuery, DefaultNeworksAdded<T>>;	
 	#[pallet::storage] // --- DMAP ( netuid, netuid ) -> registration_requirement
@@ -191,7 +191,7 @@ pub mod pallet {
 	pub type IsNetworkMember<T:Config> = StorageDoubleMap<_, Blake2_128Concat, T::AccountId, Identity, u16, bool, ValueQuery, DefaultIsNetworkMember<T>>;
 
 	// ==============================
-	// ==== Networkwork Features =====
+	// ==== Network Features =====
 	// ==============================
 	#[pallet::type_value]
 	pub fn DefaultEmissionValues<T: Config>() ->  u64 { 0 }
@@ -221,7 +221,7 @@ pub mod pallet {
 	
 
 	#[derive(Decode, Encode, PartialEq, Eq, Clone, Debug)]
-	pub struct Module<T: Config> {
+	pub struct ModuleInfo<T: Config> {
 		pub key: T::AccountId,
 		pub uid: Compact<u16>,
 		pub name : Vec<u8>, // --- Module name.
@@ -252,9 +252,14 @@ pub mod pallet {
 
 	#[pallet::storage] // --- MAP ( netuid ) --> serving_rate_limit
 	pub type ServingRateLimit<T> = StorageMap<_, Identity, u16, u64, ValueQuery, DefaultServingRateLimit<T>> ;
+<<<<<<< HEAD
+=======
+	#[pallet::storage] // --- MAP ( netuid, key ) --> module
+	pub(super) type Modules<T:Config> = StorageDoubleMap<_, Identity, u16, Blake2_128Concat, T::AccountId, ModuleInfo, OptionQuery>;
+>>>>>>> 96a67aa (fuck this wasm)
 
 	// =======================================
-	// ==== Networkwork Hyperparam storage ====
+	// ==== Network Hyperparam storage ====
 	// =======================================	
 	#[pallet::type_value] 
 	pub fn DefaultWeightsSetRateLimit<T: Config>() -> u64 { 0 }
@@ -299,7 +304,7 @@ pub mod pallet {
 	pub type BlockAtRegistration<T:Config> = StorageDoubleMap<_, Identity, u16, Identity, u16, u64, ValueQuery, DefaultBlockAtRegistration<T> >;
 
 	// =======================================
-	// ==== Networkwork Consensus Storage  ====
+	// ==== Network Consensus Storage  ====
 	// =======================================
 	#[pallet::type_value] 
 	pub fn EmptyU16Vec<T:Config>() -> Vec<u16> { vec![] }
@@ -498,17 +503,16 @@ pub mod pallet {
 			}
 
 	 	 	// Set correct length for Network modules
-			NetworkworkN::<T>::insert(netuid, next_uid);
+			// NetworkN::<T>::insert(netuid, next_uid);
 
 			// --- Increase total network count.
-			TotalNetworks::<T>::mutate(|n| *n += 1);
+			// TotalNetworks::<T>::mutate(|n| *n += 1);
 		}
 	}
 
 	// ================
 	// ==== Hooks =====
 	// ================
-  
 	#[pallet::hooks] 
 	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> { 
 		// ---- Called on the initialization of this pallet. (the order of on_finalize calls is determined in the runtime)
@@ -979,7 +983,7 @@ pub mod pallet {
 			return 0;
 		}
 	}
-}
+
 
 
 /************************************************************

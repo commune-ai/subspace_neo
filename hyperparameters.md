@@ -14,7 +14,6 @@ ImmunityPeriod: u16 = 4_096;
 ActivityCutoff: u16 = 5_000;
 MaxRegistrationsPerBlock: u16 = 1;
 PruningScore : u16 = u16::MAX;
-BondsMovingAverage: u64 = 900_000;
 DefaultTake: u16 = 11_796; // 18% honest number.
 ServingRateLimit: u64 = 50; 
 TxRateLimit: u64 = 1_000;
