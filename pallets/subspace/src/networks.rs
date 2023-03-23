@@ -10,7 +10,7 @@ use codec::Compact;
 
 
 #[derive(Decode, Encode, PartialEq, Eq, Clone, Debug)]
-pub struct SubnetInfo {
+pub struct Subnet {
     netuid: Compact<u16>,
     immunity_period: Compact<u16>,
     max_allowed_validators: Compact<u16>,
@@ -302,7 +302,7 @@ impl<T: Config> Pallet<T> {
         tempo < u16::MAX
     }
 
-    pub fn get_subnet_info(netuid: u16) -> Option<SubnetInfo> {
+    pub fn get_subnet(netuid: u16) -> Option<Subnet> {
         if !Self::if_subnet_exist(netuid) {
             return None;
         }
@@ -324,7 +324,7 @@ impl<T: Config> Pallet<T> {
             network_connect.push([_netuid_, con_req]);
         }
 
-        return Some(SubnetInfo {
+        return Some(Subnet {
             immunity_period: immunity_period.into(),
             netuid: netuid.into(),
             min_allowed_weights: min_allowed_weights.into(),
@@ -338,7 +338,7 @@ impl<T: Config> Pallet<T> {
         })
     }
 
-    pub fn get_subnets_info() -> Vec<Option<SubnetInfo>> {
+    pub fn get_subnets() -> Vec<Option<Subnet>> {
         let mut subnet_netuids = Vec::<u16>::new();
         let mut max_netuid: u16 = 0;
         for ( netuid, added ) in < NetworksAdded<T> as IterableStorageMap<u16, bool> >::iter() {
@@ -350,14 +350,14 @@ impl<T: Config> Pallet<T> {
             }
         }
 
-        let mut subnets_info = Vec::<Option<SubnetInfo>>::new();
+        let mut subnets = Vec::<Option<Subnet>>::new();
         for netuid_ in 0..(max_netuid + 1) {
             if subnet_netuids.contains(&netuid_) {
-                subnets_info.push(Self::get_subnet_info(netuid_));
+                subnets.push(Self::get_subnet(netuid_));
             }
         }
 
-        return subnets_info;
+        return subnets;
     }
 
 

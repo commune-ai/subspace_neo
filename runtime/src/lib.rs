@@ -315,7 +315,6 @@ impl pallet_sudo::Config for Runtime {
 
 // Configure the pallet subspace.
 parameter_types! {
-	pub const SubspaceInitialRho: u16 = 10;
     pub const SubspaceInitialMaxAllowedUids: u16 = 4096;
     pub const SubspaceInitialIssuance: u64 = 0;
     pub const SubspaceInitialMinAllowedWeights: u16 = 1024;
@@ -336,7 +335,6 @@ parameter_types! {
 impl pallet_subspace::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type Currency = Balances;
-	type InitialRho = SubspaceInitialRho;
 	type InitialMaxAllowedUids = SubspaceInitialMaxAllowedUids;
 	type InitialBondsMovingAverage = SubspaceInitialBondsMovingAverage;
 	type InitialIssuance = SubspaceInitialIssuance;
@@ -662,19 +660,19 @@ impl_runtime_apis! {
 		}
 	}
 
-	impl subspace_custom_rpc_runtime_api::SubnetInfoRuntimeApi<Block> for Runtime {
-		fn get_subnet_info(netuid: u16) -> Vec<u8> {
-			let _result = SubspaceModule::get_subnet_info(netuid);
+	impl subspace_custom_rpc_runtime_api::SubnetRuntimeApi<Block> for Runtime {
+		fn get_subnet(netuid: u16) -> Vec<u8> {
+			let _result = SubspaceModule::get_subnet(netuid);
 			if _result.is_some() {
-				let result = _result.expect("Could not get SubnetInfo");
+				let result = _result.expect("Could not get Subnet");
 				result.encode()
 			} else {
 				vec![]
 			}
 		}
 
-		fn get_subnets_info() -> Vec<u8> {
-			let result = SubspaceModule::get_subnets_info();
+		fn get_subnets() -> Vec<u8> {
+			let result = SubspaceModule::get_subnets();
 			result.encode()
 		}
 	}

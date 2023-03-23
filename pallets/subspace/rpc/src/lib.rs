@@ -16,20 +16,20 @@ use std::sync::Arc;
 use sp_api::ProvideRuntimeApi;
 
 pub use subspace_custom_rpc_runtime_api::ModuleRuntimeApi;
-pub use subspace_custom_rpc_runtime_api::SubnetInfoRuntimeApi;
+pub use subspace_custom_rpc_runtime_api::SubnetRuntimeApi;
 
 #[rpc(client, server)]
 pub trait SubspaceCustomApi<BlockHash> {
 
-	#[method(name = "moduleInfo_getModules")]
+	#[method(name = "module_getModules")]
 	fn get_modules(&self, netuid: u16, at: Option<BlockHash>) -> RpcResult<Vec<u8>>;
-	#[method(name = "moduleInfo_getModule")]
+	#[method(name = "module_getModule")]
 	fn get_module(&self, netuid: u16, uid: u16, at: Option<BlockHash>) -> RpcResult<Vec<u8>>;
 
-	#[method(name = "subnetInfo_getSubnetInfo")]
-	fn get_subnet_info(&self, netuid: u16, at: Option<BlockHash>) -> RpcResult<Vec<u8>>;
-	#[method(name = "subnetInfo_getSubnetsInfo")]
-	fn get_subnets_info(&self, at: Option<BlockHash>) -> RpcResult<Vec<u8>>;
+	#[method(name = "subnet_getSubnet")]
+	fn get_subnet(&self, netuid: u16, at: Option<BlockHash>) -> RpcResult<Vec<u8>>;
+	#[method(name = "subnet_getSubnetsInfo")]
+	fn get_subnets(&self, at: Option<BlockHash>) -> RpcResult<Vec<u8>>;
 }
 
 pub struct SubspaceCustom<C, P> {
@@ -64,7 +64,7 @@ where
 	Block: BlockT,
 	C: ProvideRuntimeApi<Block> + HeaderBackend<Block> + Send + Sync + 'static,
 	C::Api: ModuleRuntimeApi<Block>,
-	C::Api: SubnetInfoRuntimeApi<Block>,
+	C::Api: SubnetRuntimeApi<Block>,
 	{ 
 
 
@@ -103,11 +103,11 @@ where
 		})
 	}
 	
-	fn get_subnet_info(&self, netuid: u16, at: Option<<Block as BlockT>::Hash>) -> RpcResult<Vec<u8>> {
+	fn get_subnet(&self, netuid: u16, at: Option<<Block as BlockT>::Hash>) -> RpcResult<Vec<u8>> {
 		let api = self.client.runtime_api();
 		let at = at.unwrap_or_else(|| self.client.info().best_hash);
 
-		api.get_subnet_info(at, netuid).map_err(|e| {
+		api.get_subnet(at, netuid).map_err(|e| {
 			CallError::Custom(ErrorObject::owned(
 				Error::RuntimeError.into(),
 				"Unable to get subnet info.",
@@ -116,14 +116,14 @@ where
 		})
 	}
 
-	fn get_subnets_info(
+	fn get_subnets(
 		&self,
 		at: Option<<Block as BlockT>::Hash>
 	) -> RpcResult<Vec<u8>> {
 		let api = self.client.runtime_api();
 		let at = at.unwrap_or_else(|| self.client.info().best_hash);
 
-		api.get_subnets_info(at).map_err(|e| {
+		api.get_subnets(at).map_err(|e| {
 			CallError::Custom(ErrorObject::owned(
 			Error::RuntimeError.into(),
 			"Unable to get subnets info.",
