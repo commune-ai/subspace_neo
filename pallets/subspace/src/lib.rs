@@ -232,6 +232,8 @@ pub mod pallet {
 		pub last_update: Compact<u64>,
 	}
 
+	#[pallet::storage] // --- MAP ( netuid, key ) --> module
+	pub(super) type Modules<T:Config> = StorageDoubleMap<_, Identity, u16, Blake2_128Concat, T::AccountId, Module, OptionQuery>;
 
 	// Rate limiting
 	#[pallet::type_value]
@@ -250,8 +252,6 @@ pub mod pallet {
 
 	#[pallet::storage] // --- MAP ( netuid ) --> serving_rate_limit
 	pub type ServingRateLimit<T> = StorageMap<_, Identity, u16, u64, ValueQuery, DefaultServingRateLimit<T>> ;
-	#[pallet::storage] // --- MAP ( netuid, key ) --> module
-	pub(super) type Modules<T:Config> = StorageDoubleMap<_, Identity, u16, Blake2_128Concat, T::AccountId, Module, OptionQuery>;
 
 	// =======================================
 	// ==== Networkwork Hyperparam storage ====
