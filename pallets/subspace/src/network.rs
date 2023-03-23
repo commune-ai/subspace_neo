@@ -10,13 +10,13 @@ use codec::Compact;
 
 
 #[derive(Decode, Encode, PartialEq, Eq, Clone, Debug)]
-pub struct Subnet {
+pub struct Network {
     netuid: Compact<u16>,
     immunity_period: Compact<u16>,
     max_allowed_validators: Compact<u16>,
     min_allowed_weights: Compact<u16>,
     max_weights_limit: Compact<u16>,
-    subnetwork_n: Compact<u16>,
+    network_n: Compact<u16>,
     max_allowed_uids: Compact<u16>,
     blocks_since_last_step: Compact<u64>,
     tempo: Compact<u16>,
@@ -60,8 +60,8 @@ impl<T: Config> Pallet<T> {
         // --- 1. Ensure this is a sudo caller.
         ensure_root( origin )?;
 
-        // --- 2. Ensure this subnetwork does not already exist.
-        ensure!( !Self::if_subnet_exist( netuid ), Error::<T>::NetworkExist );
+        // --- 2. Ensure this network does not already exist.
+        ensure!( !Self::if_network_exist( netuid ), Error::<T>::NetworkExist );
 
 
         // --- 4. Ensure the tempo is valid.
@@ -101,7 +101,7 @@ impl<T: Config> Pallet<T> {
         ensure_root( origin )?;
 
         // --- 2. Ensure the network to be removed exists.
-        ensure!( Self::if_subnet_exist( netuid ), Error::<T>::NetworkDoesNotExist );
+        ensure!( Self::if_network_exist( netuid ), Error::<T>::NetworkDoesNotExist );
 
         // --- 3. Explicitly erase the network and all its parameters.
         Self::remove_network( netuid );
@@ -169,12 +169,12 @@ impl<T: Config> Pallet<T> {
         Ok(())
     }
 
-    // Initializes a new subnetwork under netuid with parameters.
+    // Initializes a new network under netuid with parameters.
     //
     pub fn init_new_network( netuid:u16, tempo:u16 ){
 
         // --- 1. Set network to 0 size.
-        SubnetworkN::<T>::insert( netuid, 0 );
+        NetworkworkN::<T>::insert( netuid, 0 );
 
         // --- 2. Set this network uid to alive.
         NetworksAdded::<T>::insert( netuid, true );
@@ -194,7 +194,7 @@ impl<T: Config> Pallet<T> {
     pub fn remove_network( netuid:u16 ) {
 
         // --- 1. Remove network count.
-        SubnetworkN::<T>::remove( netuid );
+        NetworkworkN::<T>::remove( netuid );
 
 
         // --- 3. Remove netuid from added networks.
@@ -269,7 +269,7 @@ impl<T: Config> Pallet<T> {
     //
     pub fn contains_invalid_netuids( netuids: &Vec<u16> ) -> bool {
         for netuid in netuids {
-            if !Self::if_subnet_exist( *netuid ) {
+            if !Self::if_network_exist( *netuid ) {
                 return true;
             }
         }
@@ -290,9 +290,9 @@ impl<T: Config> Pallet<T> {
         EmissionValues::<T>::insert( netuid, emission );
     }
 
-    // Returns true if the subnetwork exists.
+    // Returns true if the network exists.
     //
-    pub fn if_subnet_exist( netuid: u16 ) -> bool{
+    pub fn if_network_exist( netuid: u16 ) -> bool{
         return NetworksAdded::<T>::get( netuid );
     }
 
@@ -302,8 +302,8 @@ impl<T: Config> Pallet<T> {
         tempo < u16::MAX
     }
 
-    pub fn get_subnet(netuid: u16) -> Option<Subnet> {
-        if !Self::if_subnet_exist(netuid) {
+    pub fn get_network(netuid: u16) -> Option<Network> {
+        if !Self::if_network_exist(netuid) {
             return None;
         }
 
@@ -311,7 +311,7 @@ impl<T: Config> Pallet<T> {
         let immunity_period = Self::get_immunity_period(netuid);
         let min_allowed_weights = Self::get_min_allowed_weights(netuid);
         let max_weights_limit = Self::get_max_weight_limit(netuid);
-        let subnetwork_n = Self::get_subnetwork_n(netuid);
+        let network_n = Self::get_network_n(netuid);
         let max_allowed_uids = Self::get_max_allowed_uids(netuid);
         let blocks_since_last_step = Self::get_blocks_since_last_step(netuid);
         let tempo = Self::get_tempo(netuid);
@@ -324,12 +324,12 @@ impl<T: Config> Pallet<T> {
             network_connect.push([_netuid_, con_req]);
         }
 
-        return Some(Subnet {
+        return Some(Network {
             immunity_period: immunity_period.into(),
             netuid: netuid.into(),
             min_allowed_weights: min_allowed_weights.into(),
             max_weights_limit: max_weights_limit.into(),
-            subnetwork_n: subnetwork_n.into(),
+            network_n: network_n.into(),
             max_allowed_uids: max_allowed_uids.into(),
             blocks_since_last_step: blocks_since_last_step.into(),
             tempo: tempo.into(),
@@ -338,38 +338,38 @@ impl<T: Config> Pallet<T> {
         })
     }
 
-    pub fn get_subnets() -> Vec<Option<Subnet>> {
-        let mut subnet_netuids = Vec::<u16>::new();
+    pub fn get_networks() -> Vec<Option<Network>> {
+        let mut network_netuids = Vec::<u16>::new();
         let mut max_netuid: u16 = 0;
         for ( netuid, added ) in < NetworksAdded<T> as IterableStorageMap<u16, bool> >::iter() {
             if added {
-                subnet_netuids.push(netuid);
+                network_netuids.push(netuid);
                 if netuid > max_netuid {
                     max_netuid = netuid;
                 }
             }
         }
 
-        let mut subnets = Vec::<Option<Subnet>>::new();
+        let mut networks = Vec::<Option<Network>>::new();
         for netuid_ in 0..(max_netuid + 1) {
-            if subnet_netuids.contains(&netuid_) {
-                subnets.push(Self::get_subnet(netuid_));
+            if network_netuids.contains(&netuid_) {
+                networks.push(Self::get_network(netuid_));
             }
         }
 
-        return subnets;
+        return networks;
     }
 
 
 
-    // Return the total number of subnetworks available on the chain.
+    // Return the total number of networks available on the chain.
     //
-    pub fn get_number_of_subnets()-> u16 {
-        let mut number_of_subnets : u16 = 0;
-        for (_, _)  in <SubnetworkN<T> as IterableStorageMap<u16, u16>>::iter(){
-            number_of_subnets = number_of_subnets + 1;
+    pub fn get_number_of_networks()-> u16 {
+        let mut number_of_networks : u16 = 0;
+        for (_, _)  in <NetworkworkN<T> as IterableStorageMap<u16, u16>>::iter(){
+            number_of_networks = number_of_networks + 1;
         }
-        return number_of_subnets;
+        return number_of_networks;
     }
 
     }

@@ -7,12 +7,12 @@ use frame_support::storage::IterableStorageDoubleMap;
 
 impl<T: Config> Pallet<T> {
 
-    // Calculates reward consensus and returns the emissions for uids/keys in a given `netuid`.
+    // Calculates reward and returns the emissions for uids/keys in a given `netuid`.
     // (Dense version used only for testing purposes.)
     pub fn epoch_dense( netuid: u16, rao_emission: u64 ) -> Vec<(T::AccountId, u64)> {
   
-        // Get subnetwork size.
-        let n: u16 = Self::get_subnetwork_n( netuid );
+        // Get networkwork size.
+        let n: u16 = Self::get_networkwork_n( netuid );
         log::trace!( "n:\n{:?}\n", n );
 
         // ======================
@@ -104,21 +104,12 @@ impl<T: Config> Pallet<T> {
         // Compute preranks: r_j = SUM(i) w_ij * s_i
         let preranks: Vec<I32F32> = matmul( &weights, &active_stake );
 
-        // Clip weights at majority consensus
-        let kappa: I32F32 = Self::get_float_kappa( netuid );  // consensus majority ratio, e.g. 51%.
-        let consensus: Vec<I32F32> = weighted_median_col( &active_stake, &weights, kappa );
-        inplace_col_clip( &mut weights, &consensus );
-
         // ====================================
         // == Ranks, Server Trust, Incentive ==
         // ====================================
 
         // Compute ranks: r_j = SUM(i) w_ij * s_i
         let mut ranks: Vec<I32F32> = matmul( &weights, &active_stake );
-
-        // Compute server trust: ratio of rank after vs. rank before.
-        let trust: Vec<I32F32> = vecdiv( &ranks, &preranks );
-
         inplace_normalize( &mut ranks );
         let incentive: Vec<I32F32> = ranks.clone();
         log::trace!( "I:\n{:?}\n", &incentive );
@@ -183,16 +174,12 @@ impl<T: Config> Pallet<T> {
         // ===================
         let cloned_emission: Vec<u64> = emission.clone();
         let cloned_ranks: Vec<u16> = ranks.iter().map(|xi| fixed_proportion_to_u16(*xi)).collect::<Vec<u16>>();
-        let cloned_trust: Vec<u16> = trust.iter().map(|xi| fixed_proportion_to_u16(*xi)).collect::<Vec<u16>>();
-        let cloned_consensus: Vec<u16> = consensus.iter().map(|xi| fixed_proportion_to_u16(*xi)).collect::<Vec<u16>>();
         let cloned_incentive: Vec<u16> = incentive.iter().map(|xi| fixed_proportion_to_u16(*xi)).collect::<Vec<u16>>();
         let cloned_dividends: Vec<u16> = dividends.iter().map(|xi| fixed_proportion_to_u16(*xi)).collect::<Vec<u16>>();
         let cloned_pruning_scores: Vec<u16> = pruning_scores.iter().map(|xi| fixed_proportion_to_u16(*xi)).collect::<Vec<u16>>();
         Active::<T>::insert( netuid, active.clone() );
         Emission::<T>::insert( netuid, cloned_emission );
         Rank::<T>::insert( netuid, cloned_ranks);
-        Trust::<T>::insert( netuid, cloned_trust);
-        Consensus::<T>::insert( netuid, cloned_consensus );
         Incentive::<T>::insert( netuid, cloned_incentive );
         Dividends::<T>::insert( netuid, cloned_dividends );
         PruningScores::<T>::insert( netuid, cloned_pruning_scores );
@@ -211,7 +198,7 @@ impl<T: Config> Pallet<T> {
 
     }
 
-    // Calculates reward consensus values, then updates rank, trust, consensus, incentive, dividend, pruning_score, emission and bonds, and 
+    // Calculates reward consensus values, then updates rank, incentive, dividend, pruning_score, emission and bonds, and 
     // returns the emissions for uids/keys in a given `netuid`.
     //
     // # Args:
@@ -225,8 +212,8 @@ impl<T: Config> Pallet<T> {
     // 		- Print debugging outputs.
     //    
     pub fn epoch( netuid: u16, rao_emission: u64 ) -> Vec<(T::AccountId, u64)> {
-        // Get subnetwork size.
-        let n: u16 = Self::get_subnetwork_n( netuid );
+        // Get network size.
+        let n: u16 = Self::get_network_n( netuid );
         log::trace!( "n: {:?}", n );
 
         // ======================
@@ -321,10 +308,6 @@ impl<T: Config> Pallet<T> {
         let mut ranks: Vec<I32F32> = matmul_sparse( &weights, &active_stake, n );
         // log::trace!( "R (after): {:?}", &ranks );
 
-        // Compute server trust: ratio of rank after vs. rank before.
-        let trust: Vec<I32F32> = vecdiv( &ranks, &preranks );  // range: I32F32(0, 1)
-        log::trace!( "T: {:?}", &trust );
-
         inplace_normalize( &mut ranks );  // range: I32F32(0, 1)
         let incentive: Vec<I32F32> = ranks.clone();
         log::trace!( "I (=R): {:?}", &incentive );
@@ -398,8 +381,6 @@ impl<T: Config> Pallet<T> {
         // ===================
         let cloned_emission: Vec<u64> = emission.clone();
         let cloned_ranks: Vec<u16> = ranks.iter().map(|xi| fixed_proportion_to_u16(*xi)).collect::<Vec<u16>>();
-        let cloned_trust: Vec<u16> = trust.iter().map(|xi| fixed_proportion_to_u16(*xi)).collect::<Vec<u16>>();
-        let cloned_consensus: Vec<u16> = consensus.iter().map(|xi| fixed_proportion_to_u16(*xi)).collect::<Vec<u16>>();
         let cloned_incentive: Vec<u16> = incentive.iter().map(|xi| fixed_proportion_to_u16(*xi)).collect::<Vec<u16>>();
         let cloned_dividends: Vec<u16> = dividends.iter().map(|xi| fixed_proportion_to_u16(*xi)).collect::<Vec<u16>>();
         let cloned_pruning_scores: Vec<u16> = pruning_scores.iter().map(|xi| fixed_proportion_to_u16(*xi)).collect::<Vec<u16>>();
@@ -426,10 +407,10 @@ impl<T: Config> Pallet<T> {
     }
 
     pub fn get_normalized_stake( netuid:u16 ) -> Vec<I32F32> {
-        let n: usize = Self::get_subnetwork_n( netuid ) as usize; 
+        let n: usize = Self::get_network_n( netuid ) as usize; 
         let mut stake_64: Vec<I64F64> = vec![ I64F64::from_num(0.0); n ]; 
         for module_uid in 0..n {
-            stake_64[module_uid] = I64F64::from_num( Self::get_stake_for_uid_and_subnetwork( netuid, module_uid as u16 ) );
+            stake_64[module_uid] = I64F64::from_num( Self::get_stake_for_uid_and_network( netuid, module_uid as u16 ) );
         }
         inplace_normalize_64( &mut stake_64 );
         let stake: Vec<I32F32> = vec_fixed64_to_fixed32( stake_64 );
@@ -437,7 +418,7 @@ impl<T: Config> Pallet<T> {
     }
 
     pub fn get_block_at_registration( netuid:u16 ) -> Vec<u64> { 
-        let n: usize = Self::get_subnetwork_n( netuid ) as usize;
+        let n: usize = Self::get_network_n( netuid ) as usize;
         let mut block_at_registration: Vec<u64> = vec![ 0; n ];
         for module_uid in 0..n {
             if Keys::<T>::contains_key( netuid, module_uid as u16 ){
@@ -448,7 +429,7 @@ impl<T: Config> Pallet<T> {
     }
 
     pub fn get_weights_sparse( netuid:u16 ) -> Vec<Vec<(u16, I32F32)>> { 
-        let n: usize = Self::get_subnetwork_n( netuid ) as usize; 
+        let n: usize = Self::get_network_n( netuid ) as usize; 
         let mut weights: Vec<Vec<(u16, I32F32)>> = vec![ vec![]; n ]; 
         for ( uid_i, weights_i ) in < Weights<T> as IterableStorageDoubleMap<u16, u16, Vec<(u16, u16)> >>::iter_prefix( netuid ) {
             for (uid_j, weight_ij) in weights_i.iter() { 
@@ -459,7 +440,7 @@ impl<T: Config> Pallet<T> {
     } 
 
     pub fn get_weights( netuid:u16 ) -> Vec<Vec<I32F32>> { 
-        let n: usize = Self::get_subnetwork_n( netuid ) as usize; 
+        let n: usize = Self::get_network_n( netuid ) as usize; 
         let mut weights: Vec<Vec<I32F32>> = vec![ vec![ I32F32::from_num(0.0); n ]; n ]; 
         for ( uid_i, weights_i ) in < Weights<T> as IterableStorageDoubleMap<u16, u16, Vec<(u16, u16)> >>::iter_prefix( netuid ) {
             for (uid_j, weight_ij) in weights_i.iter() { 
@@ -470,7 +451,7 @@ impl<T: Config> Pallet<T> {
     }
 
     pub fn get_bonds_sparse( netuid:u16 ) -> Vec<Vec<(u16, I32F32)>> { 
-        let n: usize = Self::get_subnetwork_n( netuid ) as usize; 
+        let n: usize = Self::get_network_n( netuid ) as usize; 
         let mut bonds: Vec<Vec<(u16, I32F32)>> = vec![ vec![]; n ]; 
         for ( uid_i, bonds_i ) in < Bonds<T> as IterableStorageDoubleMap<u16, u16, Vec<(u16, u16)> >>::iter_prefix( netuid ) {
             for (uid_j, bonds_ij) in bonds_i.iter() { 
@@ -481,7 +462,7 @@ impl<T: Config> Pallet<T> {
     } 
 
     pub fn get_bonds( netuid:u16 ) -> Vec<Vec<I32F32>> { 
-        let n: usize = Self::get_subnetwork_n( netuid ) as usize; 
+        let n: usize = Self::get_network_n( netuid ) as usize; 
         let mut bonds: Vec<Vec<I32F32>> = vec![ vec![ I32F32::from_num(0.0); n ]; n ]; 
         for ( uid_i, bonds_i ) in < Bonds<T> as IterableStorageDoubleMap<u16, u16, Vec<(u16, u16)> >>::iter_prefix( netuid ) {
             for (uid_j, bonds_ij) in bonds_i.iter() { 

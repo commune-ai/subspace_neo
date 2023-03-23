@@ -56,7 +56,7 @@ mod block_step;
 
 mod epoch;
 mod math;
-mod networks;
+mod network;
 mod registration;
 mod serving;
 mod staking;
@@ -169,7 +169,7 @@ pub mod pallet {
 	pub type MaxRegistrationsPerBlock<T> = StorageMap<_, Identity, u16, u16, ValueQuery, DefaultMaxRegistrationsPerBlock<T> >;
 
 	// ==============================
-	// ==== Subnetworks Storage =====
+	// ==== Networkworks Storage =====
 	// ==============================
 	#[pallet::type_value] 
 	pub fn DefaultN<T:Config>() -> u16 { 0 }
@@ -181,8 +181,8 @@ pub mod pallet {
 
 	#[pallet::storage] // --- ITEM( tota_number_of_existing_networks )
 	pub type TotalNetworks<T> = StorageValue<_, u16, ValueQuery>;
-	#[pallet::storage] // --- MAP ( netuid ) --> subnetwork_n (Number of UIDs in the network).
-	pub type SubnetworkN<T:Config> = StorageMap< _, Identity, u16, u16, ValueQuery, DefaultN<T> >;
+	#[pallet::storage] // --- MAP ( netuid ) --> network_n (Number of UIDs in the network).
+	pub type NetworkworkN<T:Config> = StorageMap< _, Identity, u16, u16, ValueQuery, DefaultN<T> >;
 	#[pallet::storage] // --- MAP ( netuid ) --> network_is_added
 	pub type NetworksAdded<T:Config> = StorageMap<_, Identity, u16, bool, ValueQuery, DefaultNeworksAdded<T>>;	
 	#[pallet::storage] // --- DMAP ( netuid, netuid ) -> registration_requirement
@@ -191,7 +191,7 @@ pub mod pallet {
 	pub type IsNetworkMember<T:Config> = StorageDoubleMap<_, Blake2_128Concat, T::AccountId, Identity, u16, bool, ValueQuery, DefaultIsNetworkMember<T>>;
 
 	// ==============================
-	// ==== Subnetwork Features =====
+	// ==== Networkwork Features =====
 	// ==============================
 	#[pallet::type_value]
 	pub fn DefaultEmissionValues<T: Config>() ->  u64 { 0 }
@@ -254,7 +254,7 @@ pub mod pallet {
 	pub(super) type Modules<T:Config> = StorageDoubleMap<_, Identity, u16, Blake2_128Concat, T::AccountId, Module, OptionQuery>;
 
 	// =======================================
-	// ==== Subnetwork Hyperparam storage ====
+	// ==== Networkwork Hyperparam storage ====
 	// =======================================	
 	#[pallet::type_value] 
 	pub fn DefaultWeightsSetRateLimit<T: Config>() -> u64 { 0 }
@@ -304,7 +304,7 @@ pub mod pallet {
 	pub type BlockAtRegistration<T:Config> = StorageDoubleMap<_, Identity, u16, Identity, u16, u64, ValueQuery, DefaultBlockAtRegistration<T> >;
 
 	// =======================================
-	// ==== Subnetwork Consensus Storage  ====
+	// ==== Networkwork Consensus Storage  ====
 	// =======================================
 	#[pallet::type_value] 
 	pub fn EmptyU16Vec<T:Config>() -> Vec<u16> { vec![] }
@@ -359,20 +359,19 @@ pub mod pallet {
 		NetworkRemoved( u16 ), // --- Event created when a network is removed.
 		StakeAdded( T::AccountId, u64 ), // --- Event created when stake has been transfered from the a key account onto the key staking account.
 		StakeRemoved( T::AccountId, u64 ), // --- Event created when stake has been removed from the key staking account onto the key account.
-		WeightsSet( u16, u16 ), // ---- Event created when a caller successfully set's their weights on a subnetwork.
+		WeightsSet( u16, u16 ), // ---- Event created when a caller successfully set's their weights on a network.
 		ModuleRegistered( u16, u16, T::AccountId ), // --- Event created when a new module account has been registered to the chain.
 		BulkModulesRegistered( u16, u16 ), // --- Event created when multiple uids have been concurrently registered.
 		BulkBalancesSet(u16, u16),
-		MaxAllowedUidsSet( u16, u16 ), // --- Event created when max allowed uids has been set for a subnetwor.
+		MaxAllowedUidsSet( u16, u16 ), // --- Event created when max allowed uids has been set for a networkwor.
 		MaxWeightLimitSet( u16, u16 ), // --- Event created when the max weight limit has been set.
-		AdjustmentIntervalSet( u16, u16 ), // --- Event created when the adjustment interval is set for a subnet.
-		RegistrationPerIntervalSet( u16, u16 ), // --- Event created when registeration per interval is set for a subnet.
+		AdjustmentIntervalSet( u16, u16 ), // --- Event created when the adjustment interval is set for a network.
+		RegistrationPerIntervalSet( u16, u16 ), // --- Event created when registeration per interval is set for a network.
 		MaxRegistrationsPerBlockSet( u16, u16), // --- Event created when we set max registrations per block
-		ActivityCutoffSet( u16, u16 ), // --- Event created when an activity cutoff is set for a subnet.
-		RhoSet( u16, u16 ), // --- Event created when Rho value is set.
-		MinAllowedWeightSet( u16, u16 ), // --- Event created when minimun allowed weight is set for a subnet.
-		WeightsSetRateLimitSet( u16, u64 ), // --- Event create when weights set rate limit has been set for a subnet.
-		ImmunityPeriodSet( u16, u16), // --- Event created when immunity period is set for a subnet.
+		ActivityCutoffSet( u16, u16 ), // --- Event created when an activity cutoff is set for a network.
+		MinAllowedWeightSet( u16, u16 ), // --- Event created when minimun allowed weight is set for a network.
+		WeightsSetRateLimitSet( u16, u64 ), // --- Event create when weights set rate limit has been set for a network.
+		ImmunityPeriodSet( u16, u16), // --- Event created when immunity period is set for a network.
 		ModuleServed( u16, T::AccountId ), // --- Event created when the module server information is added to the network.
 		PrometheusServed( u16, T::AccountId ), // --- Event created when the module server information is added to the network.
 		EmissionValuesSet(), // --- Event created when emission ratios fr all networks is set.
@@ -444,7 +443,7 @@ pub mod pallet {
 			// Set initial total issuance from balances
 			TotalIssuance::<T>::put(self.balances_issuance);
 
-			// Subnet config values
+			// Network config values
 			let netname: Vec<u8> = "commune".as_bytes().to_vec();
 			let netuid: u16 = 0;
 			let tempo = 99;
@@ -503,8 +502,8 @@ pub mod pallet {
 				}
 			}
 
-	 	 	// Set correct length for Subnet modules
-			SubnetworkN::<T>::insert(netuid, next_uid);
+	 	 	// Set correct length for Network modules
+			NetworkworkN::<T>::insert(netuid, next_uid);
 
 			// --- Increase total network count.
 			TotalNetworks::<T>::mutate(|n| *n += 1);
@@ -748,7 +747,7 @@ pub mod pallet {
 			Self::do_serve_module( origin, netuid, version, ip, port ) 
 		}
 
-		// ---- Registers a new module to the subnetwork. 
+		// ---- Registers a new module to the network. 
 		//
 		// # Args:
 		// 	* 'origin': (<T as frame_system::Config>Origin):
@@ -774,7 +773,7 @@ pub mod pallet {
 		//
 		// # Event:
 		// 	* ModuleRegistered;
-		// 		- On successfully registereing a uid to a module slot on a subnetwork.
+		// 		- On successfully registereing a uid to a module slot on a network.
 		//
 		// # Raises:
 		// 	* 'NetworkDoesNotExist':
@@ -804,33 +803,6 @@ pub mod pallet {
 
 
 
-		// ---- Sudo set emission values for all networks.
-		// Args:
-		// 	* 'origin': (<T as frame_system::Config>Origin):
-		// 		- The caller, must be sudo.
-		//
-		// 	* `netuids` (Vec<u16>):
-		// 		- A vector of network uids values. This must include all netuids.
-		//
-		// 	* `emission` (Vec<u64>):
-		// 		- The emission values associated with passed netuids in order.
-		// 
-		#[pallet::weight((Weight::from_ref_time(28_000_000)
-		.saturating_add(T::DbWeight::get().reads(12))
-		.saturating_add(T::DbWeight::get().writes(10)), DispatchClass::Operational, Pays::No))]
-		pub fn sudo_set_emission_values(
-			origin: OriginFor<T>,
-			netuids: Vec<u16>,
-			emission: Vec<u64>,
-		) -> DispatchResult {
-			Self::do_set_emission_values( 
-				origin,
-				netuids,
-				emission
-			)
-		}
-
-
 		// ==================================
 		// ==== Parameter Sudo calls ========
 		// ==================================
@@ -845,11 +817,7 @@ pub mod pallet {
 		// 	* `hyperparameter value` (u16):
 		// 		- The value of the hyper parameter.
 		//   
-		#[pallet::weight((Weight::from_ref_time(11_000_000)
-		.saturating_add(T::DbWeight::get().writes(1)), DispatchClass::Operational, Pays::No))]
-		pub fn sudo_set_default_take( origin:OriginFor<T>, default_take: u16 ) -> DispatchResult {  
-			Self::do_sudo_set_default_take( origin, default_take )
-		}
+
 		#[pallet::weight((Weight::from_ref_time(10_000_000)
 		.saturating_add(T::DbWeight::get().writes(1)), DispatchClass::Operational, Pays::No))]
 		pub fn sudo_set_serving_rate_limit( origin:OriginFor<T>, netuid: u16, serving_rate_limit: u64 ) -> DispatchResult {  

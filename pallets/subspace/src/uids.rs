@@ -9,8 +9,8 @@ impl<T: Config> Pallet<T> {
 
     // Returns the number of filled slots on a network.
     ///
-    pub fn get_subnetwork_n( netuid:u16 ) -> u16 { 
-        return SubnetworkN::<T>::get( netuid ) 
+    pub fn get_network_n( netuid:u16 ) -> u16 { 
+        return NetworkworkN::<T>::get( netuid ) 
     }
 
     // Replace the module under this uid.
@@ -37,19 +37,18 @@ impl<T: Config> Pallet<T> {
     // Appends the uid to the network.
     pub fn append_module( netuid: u16, new_key: &T::AccountId, block_number:u64 ) {
 
-        // 1. Get the next uid. This is always equal to subnetwork_n.
-        let next_uid: u16 = Self::get_subnetwork_n( netuid );
+        // 1. Get the next uid. This is always equal to network_n.
+        let next_uid: u16 = Self::get_network_n( netuid );
         log::debug!("append_module( netuid: {:?} | next_uid: {:?} | new_key: {:?} ) ", netuid, new_key, next_uid );
 
         // 2. Get and increase the uid count.
-        SubnetworkN::<T>::insert( netuid, next_uid + 1 );
+        NetworkworkN::<T>::insert( netuid, next_uid + 1 );
 
         // 3. Expand Yuma Consensus with new position.
         Rank::<T>::mutate(netuid, |v| v.push(0) );
         Trust::<T>::mutate(netuid, |v| v.push(0) );
         Active::<T>::mutate(netuid, |v| v.push( true ) );
         Emission::<T>::mutate(netuid, |v| v.push(0) );
-        Consensus::<T>::mutate(netuid, |v| v.push(0) );
         Incentive::<T>::mutate(netuid, |v| v.push(0) );
         Dividends::<T>::mutate(netuid, |v| v.push(0) );
         LastUpdate::<T>::mutate(netuid, |v| v.push( block_number ) );
@@ -88,7 +87,7 @@ impl<T: Config> Pallet<T> {
 
     // Returns the stake of the uid on network or 0 if it doesnt exist.
     //
-    pub fn get_stake_for_uid_and_subnetwork( netuid: u16, module_uid: u16) -> u64 { 
+    pub fn get_stake_for_uid_and_network( netuid: u16, module_uid: u16) -> u64 { 
         if Self::is_uid_exist_on_network( netuid, module_uid) {
             return Self::get_total_stake_for_key( &Self::get_key_for_net_and_uid( netuid, module_uid ).unwrap() ) 
         } else {
@@ -97,15 +96,6 @@ impl<T: Config> Pallet<T> {
     }
 
 
-    // Return the total number of subnetworks available on the chain.
-    //
-    pub fn get_number_of_subnets()-> u16 {
-        let mut number_of_subnets : u16 = 0;
-        for (_, _)  in <SubnetworkN<T> as IterableStorageMap<u16, u16>>::iter(){
-            number_of_subnets = number_of_subnets + 1;
-        }
-        return number_of_subnets;
-    }
 
     // Return a list of all networks a key is registered on.
     //

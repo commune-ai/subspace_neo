@@ -36,7 +36,7 @@ impl<T: Config> Pallet<T> {
     //
     // # Event:
     // 	* ModuleRegistered;
-    // 		- On successfully registereing a uid to a module slot on a subnetwork.
+    // 		- On successfully registereing a uid to a module slot on a network.
     //
     // # Raises:
     // 	* 'NetworkDoesNotExist':
@@ -47,16 +47,6 @@ impl<T: Config> Pallet<T> {
     //
     // 	* 'AlreadyRegistered':
     // 		- The key is already registered on this network.
-    //
-    // 	* 'InvalidWorkBlock':
-    // 		- The work has been performed on a stale, future, or non existent block.
-    //
-    // 	* 'WorkRepeated':
-    // 		- This work for block has already been used.
-    //
-
-    // 	* 'InvalidSeal':
-    // 		- The seal is incorrect.
     //
     pub fn do_registration( 
         origin: T::RuntimeOrigin,
@@ -72,7 +62,7 @@ impl<T: Config> Pallet<T> {
         let current_block_number: u64 = Self::get_current_block_as_u64();
 
         // --- 2. Ensure the passed network is valid.
-        ensure!( Self::if_subnet_exist( netuid ), Error::<T>::NetworkDoesNotExist ); 
+        ensure!( Self::if_network_exist( netuid ), Error::<T>::NetworkDoesNotExist ); 
 
         // --- 3. Ensure we are not exceeding the max allowed registrations per block.
         ensure!( Self::get_registrations_this_block( netuid ) < Self::get_max_registrations_per_block( netuid ), Error::<T>::TooManyRegistrationsThisBlock );
@@ -83,28 +73,28 @@ impl<T: Config> Pallet<T> {
         // --- 11. Ensure that the pairing is correct.
 
         // --- 12. Append module or prune it.
-        let subnetwork_uid: u16;
-        let current_subnetwork_n: u16 = Self::get_subnetwork_n( netuid );
+        let network_uid: u16;
+        let current_network_n: u16 = Self::get_network_n( netuid );
 
         // Possibly there is no module slots at all.
         ensure!( Self::get_max_allowed_uids( netuid ) != 0, Error::<T>::NetworkDoesNotExist );
         
-        if current_subnetwork_n < Self::get_max_allowed_uids( netuid ) {
+        if current_network_n < Self::get_max_allowed_uids( netuid ) {
 
-            // --- 12.1.1 No replacement required, the uid appends the subnetwork.
-            // We increment the subnetwork count here but not below.
-            subnetwork_uid = current_subnetwork_n;
+            // --- 12.1.1 No replacement required, the uid appends the network.
+            // We increment the network count here but not below.
+            network_uid = current_network_n;
 
-            // --- 12.1.2 Expand subnetwork with new account.
+            // --- 12.1.2 Expand network with new account.
             Self::append_module( netuid, &key, current_block_number );
             log::info!("add new module account");
         } else {
             // --- 12.1.1 Replacement required.
             // We take the module with the lowest pruning score here.
-            subnetwork_uid = Self::get_module_to_prune( netuid );
+            network_uid = Self::get_module_to_prune( netuid );
 
             // --- 12.1.1 Replace the module account with the new info.
-            Self::replace_module( netuid, subnetwork_uid, &key, current_block_number );
+            Self::replace_module( netuid, network_uid, &key, current_block_number );
             log::info!("prune module");
         }
 
@@ -113,18 +103,11 @@ impl<T: Config> Pallet<T> {
         RegistrationsThisBlock::<T>::mutate( netuid, |val| *val += 1 );
     
         // --- 15. Deposit successful event.
-        log::info!("ModuleRegistered( netuid:{:?} uid:{:?} key:{:?}  ) ", netuid, subnetwork_uid, key );
-        Self::deposit_event( Event::ModuleRegistered( netuid, subnetwork_uid, key ) );
+        log::info!("ModuleRegistered( netuid:{:?} uid:{:?} key:{:?}  ) ", netuid, network_uid, key );
+        Self::deposit_event( Event::ModuleRegistered( netuid, network_uid, key ) );
 
         // --- 16. Ok and done.
         Ok(())
-    }
-
-    pub fn vec_to_hash( vec_hash: Vec<u8> ) -> H256 {
-        let de_ref_hash = &vec_hash; // b: &Vec<u8>
-        let de_de_ref_hash: &[u8] = &de_ref_hash; // c: &[u8]
-        let real_hash: H256 = H256::from_slice( de_de_ref_hash );
-        return real_hash
     }
 
     // Determine which peer to prune from the network by finding the element with the lowest pruning score out of
@@ -135,8 +118,8 @@ impl<T: Config> Pallet<T> {
         let mut min_score_in_immunity_period = u16::MAX;
         let mut uid_with_min_score = 0;
         let mut uid_with_min_score_in_immunity_period: u16 =  0;
-        if Self::get_subnetwork_n( netuid ) == 0 { return 0 } // If there are no modules in this network.
-        for module_uid_i in 0..Self::get_subnetwork_n( netuid ) {
+        if Self::get_network_n( netuid ) == 0 { return 0 } // If there are no modules in this network.
+        for module_uid_i in 0..Self::get_network_n( netuid ) {
             let pruning_score:u16 = Self::get_pruning_score_for_uid( netuid, module_uid_i );
             let block_at_registration: u64 = Self::get_module_block_at_registration( netuid, module_uid_i );
             let current_block :u64 = Self::get_current_block_as_u64();
@@ -168,31 +151,6 @@ impl<T: Config> Pallet<T> {
         }
     } 
 
-
-
-    pub fn get_block_hash_from_u64 ( block_number: u64 ) -> H256 {
-        let block_number: T::BlockNumber = TryInto::<T::BlockNumber>::try_into( block_number ).ok().expect("convert u64 to block number.");
-        let block_hash_at_number: <T as frame_system::Config>::Hash = system::Pallet::<T>::block_hash( block_number );
-        let vec_hash: Vec<u8> = block_hash_at_number.as_ref().into_iter().cloned().collect();
-        let deref_vec_hash: &[u8] = &vec_hash; // c: &[u8]
-        let real_hash: H256 = H256::from_slice( deref_vec_hash );
-
-        log::trace!(
-			target: LOG_TARGET,
-			"block_number: {:?}, vec_hash: {:?}, real_hash: {:?}",
-			block_number,
-			vec_hash,
-			real_hash
-		);
-
-        return real_hash;
-    }
-
-    pub fn hash_to_vec( hash: H256 ) -> Vec<u8> {
-        let hash_as_bytes: &[u8] = hash.as_bytes();
-        let hash_as_vec: Vec<u8> = hash_as_bytes.iter().cloned().collect();
-        return hash_as_vec
-    }
 
 
 }

@@ -217,7 +217,7 @@ impl<T: Config> Pallet<T> {
     }
 
     pub fn can_remove_balance_from_account(key: &T::AccountId, amount: <<T as Config>::Currency as Currency<<T as system::Config>::AccountId>>::Balance) -> bool {
-        let current_balance = Self::get_key_balance(key);
+        let current_balance = Self::get_balance(key);
         if amount > current_balance {
             return false;
         }

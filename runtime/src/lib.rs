@@ -660,19 +660,19 @@ impl_runtime_apis! {
 		}
 	}
 
-	impl subspace_custom_rpc_runtime_api::SubnetRuntimeApi<Block> for Runtime {
-		fn get_subnet(netuid: u16) -> Vec<u8> {
-			let _result = SubspaceModule::get_subnet(netuid);
+	impl subspace_custom_rpc_runtime_api::NetworkRuntimeApi<Block> for Runtime {
+		fn get_network(netuid: u16) -> Vec<u8> {
+			let _result = SubspaceModule::get_network(netuid);
 			if _result.is_some() {
-				let result = _result.expect("Could not get Subnet");
+				let result = _result.expect("Could not get Network");
 				result.encode()
 			} else {
 				vec![]
 			}
 		}
 
-		fn get_subnets() -> Vec<u8> {
-			let result = SubspaceModule::get_subnets();
+		fn get_networks() -> Vec<u8> {
+			let result = SubspaceModule::get_networks();
 			result.encode()
 		}
 	}

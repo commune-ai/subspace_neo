@@ -20,9 +20,6 @@ impl<T: Config> Pallet<T> {
     // 	* 'values' ( Vec<u16> ):
     // 		- The values of the weights to set on the chain.
     //
-    // 	* 'version_key' ( u64 ):
-    // 		- The network version key.
-    //
     // # Event:
     // 	* WeightsSet;
     // 		- On successfully setting the weights on chain.
@@ -34,9 +31,7 @@ impl<T: Config> Pallet<T> {
     // 	* 'NotRegistered':
     // 		- Attempting to set weights from a non registered account.
     //
-    // 	* 'IncorrectNetworkVersionKey':
-    // 		- Attempting to set weights without having an up-to-date version_key.
-    //
+
     // 	* 'SettingWeightsTooFast':
     // 		- Attempting to set weights faster than the weights_set_rate_limit.
     //
@@ -58,28 +53,24 @@ impl<T: Config> Pallet<T> {
     // 	* 'MaxWeightExceeded':
     // 		- Attempting to set weights with max value exceeding limit.
     //
-    pub fn do_set_weights( origin: T::RuntimeOrigin, netuid: u16, uids: Vec<u16>, values: Vec<u16>, version_key:u64 ) -> dispatch::DispatchResult{
+    pub fn do_set_weights( origin: T::RuntimeOrigin, netuid: u16, uids: Vec<u16>, values: Vec<u16> ) -> dispatch::DispatchResult{
 
         // --- 1. Check the caller's signature. This is the key of a registered account.
         let key = ensure_signed( origin )?;
         log::info!("do_set_weights( origin:{:?} netuid:{:?}, uids:{:?}, values:{:?})", key, netuid, uids, values );
+        // --- 2. Check to see if this is a valid network.
+        ensure!( Self::if_network_exist( netuid ), Error::<T>::NetworkDoesNotExist );
 
-        // --- 2. Check that the length of uid list and value list are equal for this network.
-        ensure!( Self::uids_match_values( &uids, &values ), Error::<T>::WeightVecNotEqualSize );
-
-        // --- 3. Check to see if this is a valid network.
-        ensure!( Self::if_subnet_exist( netuid ), Error::<T>::NetworkDoesNotExist );
-        
-        // --- 4. Check to see if the number of uids is within the max allowed uids for this network.
-        ensure!( Self::check_len_uids_within_allowed( netuid, &uids ), Error::<T>::TooManyUids);
-
-        // --- 5. Check to see if the key is registered to the passed network.
+        // --- 3. Check to see if the key is registered to the passed network.
         ensure!( Self::is_key_registered_on_network( netuid, &key ), Error::<T>::NotRegistered );
 
-        // --- 6. Ensure version_key is up-to-date.
-        ensure!( Self::check_version_key( netuid, version_key ), Error::<T>::IncorrectNetworkVersionKey );
+        // --- 4. Check that the length of uid list and value list are equal for this network.
+        ensure!( Self::uids_match_values( &uids, &values ), Error::<T>::WeightVecNotEqualSize );
 
-        // --- 7. Get the module uid of associated key on network netuid.
+        // --- 5. Check to see if the number of uids is within the max allowed uids for this network.
+        ensure!( Self::check_len_uids_within_allowed( netuid, &uids ), Error::<T>::TooManyUids);
+
+        // --- 6. Get the module uid of associated key on network netuid.
         let module_uid;
         match Self::get_uid_for_net_and_key( netuid, &key ) { Ok(k) => module_uid = k, Err(e) => panic!("Error: {:?}", e) } 
 
@@ -124,14 +115,6 @@ impl<T: Config> Pallet<T> {
 	// ==== Helper functions ====
 	// ==========================
     
-    // Returns true if version_key is up-to-date.
-    //
-    pub fn check_version_key( netuid: u16, version_key: u64) -> bool {
-        let network_version_key: u64 = WeightsVersionKey::<T>::get( netuid );
-        log::info!("check_version_key( network_version_key:{:?}, version_key:{:?} )", network_version_key, version_key );
-        return network_version_key == 0 || version_key == network_version_key;
-    }
-
     // Checks if the module has set weights within the weights_set_rate_limit.
     //
     pub fn check_rate_limit( netuid: u16, module_uid: u16, current_block: u64 ) -> bool {
@@ -222,9 +205,9 @@ impl<T: Config> Pallet<T> {
 
     // Returns False is the number of uids exceeds the allowed number of uids for this network.
     pub fn check_len_uids_within_allowed( netuid: u16, uids: &Vec<u16> ) -> bool {
-        let subnetwork_n: u16 = Self::get_subnetwork_n( netuid );
-        // we should expect at most subnetwork_n uids.
-        return uids.len() <= subnetwork_n as usize;
+        let network_n: u16 = Self::get_network_n( netuid );
+        // we should expect at most network_n uids.
+        return uids.len() <= network_n as usize;
     }
     
 }

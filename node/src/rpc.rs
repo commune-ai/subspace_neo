@@ -38,7 +38,7 @@ where
 	C::Api: pallet_transaction_payment_rpc::TransactionPaymentRuntimeApi<Block, Balance>,
 	C::Api: BlockBuilder<Block>,
 	C::Api: subspace_custom_rpc_runtime_api::ModuleRuntimeApi<Block>,
-	C::Api: subspace_custom_rpc_runtime_api::SubnetRuntimeApi<Block>,
+	C::Api: subspace_custom_rpc_runtime_api::NetworkRuntimeApi<Block>,
 	P: TransactionPool + 'static
 {
 	use pallet_transaction_payment_rpc::{TransactionPayment, TransactionPaymentApiServer};

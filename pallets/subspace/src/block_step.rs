@@ -118,7 +118,6 @@ impl<T: Config> Pallet<T> {
     }
     // Distributes token inflation through the key based on emission. The call ensures that the inflation
     // is distributed onto the accounts in proportion of the stake  minus the take. This function
-    // is called after an epoch to distribute the newly minted stake according to delegation.
     //
     pub fn emit_inflation_through_account( key: &T::AccountId, emission: u64) {
         // --- 1.We simply increase the key's stake.
@@ -128,33 +127,6 @@ impl<T: Config> Pallet<T> {
 
         }
 
-    }
-
-    // Increases the stake on the cold - hot pairing by increment while also incrementing other counters.
-    // This function should be called rather than set_stake under account.
-    // 
-    pub fn block_step_increase_stake_on_account( key: &T::AccountId, increment: u64 ){
-        Stake::<T>::insert( key, Stake::<T>::get( key).saturating_add( increment ) );
-        TotalStake::<T>::put( TotalStake::<T>::get().saturating_add( increment ) );
-        TotalIssuance::<T>::put( TotalIssuance::<T>::get().saturating_add( increment ) );
-
-    }
-
-    // Decreases the stake on the cold - hot pairing by the decrement while decreasing other counters.
-    //
-    pub fn block_step_decrease_stake_on_account(  key: &T::AccountId, decrement: u64 ){
-        Stake::<T>::insert( key, Stake::<T>::get( key).saturating_sub( decrement ) );
-        TotalStake::<T>::put( TotalStake::<T>::get().saturating_sub( decrement ) );
-        TotalIssuance::<T>::put( TotalIssuance::<T>::get().saturating_sub( decrement ) );
-    }
-
-    // Returns emission awarded to a key as a function of its proportion of the total stake.
-    //
-    pub fn calculate_stake_proportional_emission( stake: u64, total_stake:u64, emission: u64 ) -> u64 {
-        if total_stake == 0 { return 0 };
-        let stake_proportion: I64F64 = I64F64::from_num( stake ) / I64F64::from_num( total_stake );
-        let proportional_emission: I64F64 = I64F64::from_num( emission ) * stake_proportion;
-        return proportional_emission.to_num::<u64>();
     }
 
 
@@ -185,12 +157,12 @@ impl<T: Config> Pallet<T> {
                 let target_registrations_this_interval: u16 = Self::get_target_registrations_per_interval( netuid );
    
 
-                // --- 6. Drain all counters for this network for this interval.
+                // --- 5. Drain all counters for this network for this interval.
                 Self::set_last_adjustment_block( netuid, current_block );
                 Self::set_registrations_this_interval( netuid, 0 );
             }
 
-            // --- 7. Drain block registrations for each network. Needed for registration rate limits.
+            // --- 6. Drain block registrations for each network. Needed for registration rate limits.
             Self::set_registrations_this_block( netuid, 0 );
         }
     }

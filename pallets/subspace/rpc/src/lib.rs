@@ -16,7 +16,7 @@ use std::sync::Arc;
 use sp_api::ProvideRuntimeApi;
 
 pub use subspace_custom_rpc_runtime_api::ModuleRuntimeApi;
-pub use subspace_custom_rpc_runtime_api::SubnetRuntimeApi;
+pub use subspace_custom_rpc_runtime_api::NetworkRuntimeApi;
 
 #[rpc(client, server)]
 pub trait SubspaceCustomApi<BlockHash> {
@@ -26,10 +26,10 @@ pub trait SubspaceCustomApi<BlockHash> {
 	#[method(name = "module_getModule")]
 	fn get_module(&self, netuid: u16, uid: u16, at: Option<BlockHash>) -> RpcResult<Vec<u8>>;
 
-	#[method(name = "subnet_getSubnet")]
-	fn get_subnet(&self, netuid: u16, at: Option<BlockHash>) -> RpcResult<Vec<u8>>;
-	#[method(name = "subnet_getSubnetsInfo")]
-	fn get_subnets(&self, at: Option<BlockHash>) -> RpcResult<Vec<u8>>;
+	#[method(name = "network_getNetwork")]
+	fn get_network(&self, netuid: u16, at: Option<BlockHash>) -> RpcResult<Vec<u8>>;
+	#[method(name = "network_getNetworksInfo")]
+	fn get_networks(&self, at: Option<BlockHash>) -> RpcResult<Vec<u8>>;
 }
 
 pub struct SubspaceCustom<C, P> {
@@ -64,7 +64,7 @@ where
 	Block: BlockT,
 	C: ProvideRuntimeApi<Block> + HeaderBackend<Block> + Send + Sync + 'static,
 	C::Api: ModuleRuntimeApi<Block>,
-	C::Api: SubnetRuntimeApi<Block>,
+	C::Api: NetworkRuntimeApi<Block>,
 	{ 
 
 
@@ -103,30 +103,30 @@ where
 		})
 	}
 	
-	fn get_subnet(&self, netuid: u16, at: Option<<Block as BlockT>::Hash>) -> RpcResult<Vec<u8>> {
+	fn get_network(&self, netuid: u16, at: Option<<Block as BlockT>::Hash>) -> RpcResult<Vec<u8>> {
 		let api = self.client.runtime_api();
 		let at = at.unwrap_or_else(|| self.client.info().best_hash);
 
-		api.get_subnet(at, netuid).map_err(|e| {
+		api.get_network(at, netuid).map_err(|e| {
 			CallError::Custom(ErrorObject::owned(
 				Error::RuntimeError.into(),
-				"Unable to get subnet info.",
+				"Unable to get network info.",
 				Some(e.to_string()),
 			)).into()
 		})
 	}
 
-	fn get_subnets(
+	fn get_networks(
 		&self,
 		at: Option<<Block as BlockT>::Hash>
 	) -> RpcResult<Vec<u8>> {
 		let api = self.client.runtime_api();
 		let at = at.unwrap_or_else(|| self.client.info().best_hash);
 
-		api.get_subnets(at).map_err(|e| {
+		api.get_networks(at).map_err(|e| {
 			CallError::Custom(ErrorObject::owned(
 			Error::RuntimeError.into(),
-			"Unable to get subnets info.",
+			"Unable to get networks info.",
 			Some(e.to_string()),
 			)).into()
 		})

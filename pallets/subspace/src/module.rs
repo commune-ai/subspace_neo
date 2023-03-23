@@ -6,7 +6,7 @@ use alloc::vec::Vec;
 use codec::Compact;
 
 #[derive(Decode, Encode, PartialEq, Eq, Clone, Debug)]
-pub struct ModuleMetadata<T: Config> {
+pub struct ModuleNetworkData<T: Config> {
     key: T::AccountId,
     uid: Compact<u16>,
     netuids: Vec<Compact<u16>>,
@@ -25,18 +25,18 @@ pub struct ModuleMetadata<T: Config> {
 
 
 impl<T: Config> Pallet<T> {
-	pub fn get_modules(netuid: u16) -> Vec<ModuleMetadata<T>> {
-        if !Self::if_subnet_exist(netuid) {
+	pub fn get_modules(netuid: u16) -> Vec<ModuleNetworkData<T>> {
+        if !Self::if_network_exist(netuid) {
             return Vec::new();
         }
 
         let mut modules = Vec::new();
-        let n = Self::get_subnetwork_n(netuid);
+        let n = Self::get_network_n(netuid);
         for uid in 0..n {
             let uid = uid;
             let netuid = netuid;
 
-            let _module = Self::get_module_subnet_exists(netuid, uid);
+            let _module = Self::get_module_network_exists(netuid, uid);
             let module;
             if _module.is_none() {
                 break; // No more modules
@@ -50,7 +50,7 @@ impl<T: Config> Pallet<T> {
         modules
 	}
 
-    fn get_module_subnet_exists(netuid: u16, uid: u16) -> Option<ModuleMetadata<T>> {
+    fn get_module_network_exists(netuid: u16, uid: u16) -> Option<ModuleNetworkData<T>> {
         let _key = Self::get_key_for_net_and_uid(netuid, uid);
         let key;
         if _key.is_err() {
@@ -104,11 +104,11 @@ impl<T: Config> Pallet<T> {
     }
 
     pub fn get_module(netuid: u16, uid: u16) -> Option<Module<T>> {
-        if !Self::if_subnet_exist(netuid) {
+        if !Self::if_network_exist(netuid) {
             return None;
         }
 
-        let module = Self::get_module_subnet_exists(netuid, uid);
+        let module = Self::get_module_network_exists(netuid, uid);
         module
 	}
 
