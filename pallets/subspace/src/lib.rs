@@ -224,10 +224,10 @@ pub mod pallet {
 	pub struct Module<T: Config> {
 		pub key: T::AccountId,
 		pub uid: Compact<u16>,
+		pub name : Vec<u8>, // --- Module name.
 		pub netuid: Compact<u16>,
         pub ip: u128, // --- Module u128 encoded ip address of type v6 or v4.
         pub port: u16, // --- Module u16 encoded port.
-		pub name : Vec<u8>, // --- Module name.
 		pub uri : Vec<u8>, // --- Module uri.
 		pub last_update: Compact<u64>,
 	}
@@ -272,9 +272,6 @@ pub mod pallet {
 	pub fn DefaultMinAllowedWeights<T: Config>() -> u16 { T::InitialMinAllowedWeights::get() }
 	#[pallet::type_value]
 	pub fn DefaultAdjustmentInterval<T: Config>() -> u16 { T::InitialAdjustmentInterval::get() }
-	#[pallet::type_value]
-	pub fn DefaultBondsMovingAverage<T: Config>() -> u64 { T::InitialBondsMovingAverage::get() }
-
 	#[pallet::type_value] 
 	pub fn DefaultTargetRegistrationsPerInterval<T: Config>() -> u16 { T::InitialTargetRegistrationsPerInterval::get() }
 
@@ -294,8 +291,6 @@ pub mod pallet {
 	pub type MinAllowedWeights<T> = StorageMap< _, Identity, u16, u16, ValueQuery, DefaultMinAllowedWeights<T> >;
 	#[pallet::storage] // --- MAP ( netuid ) --> adjustment_interval
 	pub type AdjustmentInterval<T> = StorageMap<_, Identity, u16, u16, ValueQuery, DefaultAdjustmentInterval<T> >;
-	#[pallet::storage] // --- MAP ( netuid ) --> bonds_moving_average
-	pub type BondsMovingAverage<T> = StorageMap<_, Identity, u16, u64, ValueQuery, DefaultBondsMovingAverage<T> >;
 	#[pallet::storage] // --- MAP ( netuid ) --> weights_set_rate_limit
 	pub type WeightsSetRateLimit<T> = StorageMap<_, Identity, u16, u64, ValueQuery, DefaultWeightsSetRateLimit<T> >;
 	#[pallet::storage] // --- MAP ( netuid ) --> target_registrations_this_interval

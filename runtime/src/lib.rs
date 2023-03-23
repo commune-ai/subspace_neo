@@ -649,7 +649,7 @@ impl_runtime_apis! {
 			result.encode()
 		}
 
-		fn get_module(netuid: u16, uid: u16) -> Vec<u8> {
+		fn get_module_from_key(netuid: u16, uid: u16) -> Vec<u8> {
 			let _result = SubspaceModule::get_module(netuid, uid);
 			if _result.is_some() {
 				let result = _result.expect("Could not get Module");

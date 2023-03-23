@@ -10,7 +10,6 @@ pub struct ModuleNetworkData<T: Config> {
     key: T::AccountId,
     uid: Compact<u16>,
     netuids: Vec<Compact<u16>>,
-    active: bool,
     module: Module,
     stake: Vec<(T::AccountId, Compact<u64>)>, // map of key to stake on this module/key (includes delegations)
     rank: Compact<u16>,
@@ -80,7 +79,7 @@ impl<T: Config> Pallet<T> {
         let stake: Compact<u64> = Stake<T>::get(netuid, uid).into();
             .collect();
 
-        let module = Self::get_module( netuid, &key.clone() );
+        let module = Self::get_module_from_key( netuid, &key.clone() );
 
         let module = ModuleNetworkMetadata {
             key: key.clone(),
@@ -103,7 +102,7 @@ impl<T: Config> Pallet<T> {
         return Some(module);
     }
 
-    pub fn get_module(netuid: u16, uid: u16) -> Option<Module<T>> {
+    pub fn get_module_from_uid(netuid: u16, uid: u16) -> Option<Module<T>> {
         if !Self::if_network_exist(netuid) {
             return None;
         }

@@ -89,12 +89,13 @@ where
 	fn get_module(
 		&self,
 		netuid: u16,
-		uid: u16, at: Option<<Block as BlockT>::Hash>
+		uid: u16,
+		at: Option<<Block as BlockT>::Hash>
 	) -> RpcResult<Vec<u8>> {
 		let api = self.client.runtime_api();
 		let at = at.unwrap_or_else(|| self.client.info().best_hash);
 
-		api.get_module(at, netuid, uid).map_err(|e| {
+		api.get_module_from_uid(at, netuid, uid).map_err(|e| {
 			CallError::Custom(ErrorObject::owned(
 				Error::RuntimeError.into(),
 				"Unable to get module info.",
@@ -103,7 +104,11 @@ where
 		})
 	}
 	
-	fn get_network(&self, netuid: u16, at: Option<<Block as BlockT>::Hash>) -> RpcResult<Vec<u8>> {
+	fn get_network(
+				&self, 
+				netuid: u16, 
+				at: Option<<Block as BlockT>::Hash>
+			) -> RpcResult<Vec<u8>> {
 		let api = self.client.runtime_api();
 		let at = at.unwrap_or_else(|| self.client.info().best_hash);
 
