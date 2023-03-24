@@ -5,7 +5,8 @@
 // <https://docs.substrate.io/reference/frame-pallets/>
 
 pub use pallet::*;
-
+use frame_system::pallet_prelude::OriginFor;
+use frame_support::pallet_prelude::DispatchResult;
 
 use frame_system::{
 	self as system,
@@ -506,6 +507,7 @@ pub mod pallet {
 			// TotalNetworks::<T>::mutate(|n| *n += 1);
 		}
 	}
+	use frame_support::pallet_prelude::Weight;
 
 	// ================
 	// ==== Hooks =====
