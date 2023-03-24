@@ -10,7 +10,7 @@ pub struct ModuleNetworkData<T: Config> {
     key: T::AccountId,
     uid: Compact<u16>,
     netuids: Vec<Compact<u16>>,
-    module: ModuleInfo,
+    module: ModuleInfo<T>,
     stake: Vec<(T::AccountId, Compact<u64>)>, // map of key to stake on this module/key (includes delegations)
     rank: Compact<u16>,
     emission: Compact<u64>,
@@ -76,7 +76,7 @@ impl<T: Config> Pallet<T> {
             .filter_map(|(i, b)| if *b > 0 { Some((i.into(), b.into())) } else { None })
             .collect::<Vec<(Compact<u16>, Compact<u16>)>>();
         
-        let stake: Compact<u64> = Stake<T>::get(netuid, uid).into().collect();
+        let stake: Compact<u64> = <Stake<T>>::get(netuid, uid).into().collect();
 
         let module = Self::get_module_from_key( netuid, &key.clone() );
 

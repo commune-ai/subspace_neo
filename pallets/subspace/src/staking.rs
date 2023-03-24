@@ -153,11 +153,7 @@ impl<T: Config> Pallet<T> {
         TotalStake::<T>::put( Self::get_total_stake().saturating_sub( decrement ) );
     }
 
-    // Returns the total amount of stake under a key (delegative or otherwise)
-    //
-    pub fn get_total_stake_for_key( key: &T::AccountId ) -> u64 { 
-        return TotalStake::<T>::get( key ); 
-    }
+
 
     // Returns the total amount of stake held by the key (delegative or otherwise)
     //

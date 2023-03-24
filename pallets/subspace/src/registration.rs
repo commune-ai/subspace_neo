@@ -57,7 +57,7 @@ impl<T: Config> Pallet<T> {
         // --- 1. Check that the caller has signed the transaction. 
         // TODO( const ): This not be the key signature or else an exterior actor can register the key and potentially control it?
         let key = ensure_signed( origin )?;        
-        log::info!("do_registration( origin:{:?} netuid:{:?} key:{:?} )", signing_origin, netuid, key );
+        log::info!("do_registration( origin:{:?} netuid:{:?} key:{:?} )", origin, netuid, key );
 
         let current_block_number: u64 = Self::get_current_block_as_u64();
 

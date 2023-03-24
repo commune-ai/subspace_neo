@@ -135,7 +135,7 @@ impl<T: Config> Pallet<T> {
      --==[[  Helper functions   ]]==--
     *********************************/
 
-    pub fn module_passes_rate_limit( netuid: u16, prev_module: &ModuleInfo, current_block: u64 ) -> bool {
+    pub fn module_passes_rate_limit( netuid: u16, prev_module: ModuleInfo<T>, current_block: u64 ) -> bool {
         let rate_limit: u64 = Self::get_serving_rate_limit(netuid);
         let last_serve = prev_module.block;
         return rate_limit == 0 || last_serve == 0 || current_block - last_serve >= rate_limit;
@@ -147,7 +147,7 @@ impl<T: Config> Pallet<T> {
     }
 
 
-    pub fn get_module_from_key( netuid: u16, key: &T::AccountId ) -> ModuleInfo {
+    pub fn get_module_from_key( netuid: u16, key: &T::AccountId ) -> ModuleInfo<T> {
         if Self::has_module( netuid, key ) {
             return Modules::<T>::get( netuid, key ).unwrap();
         } else{
