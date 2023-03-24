@@ -6,10 +6,12 @@
 
 pub use pallet::*;
 
+
 use frame_system::{
 	self as system,
 	ensure_signed
 };
+
 
 use frame_support::{
 	dispatch,
@@ -63,7 +65,7 @@ mod staking;
 mod utils;
 mod uids;
 mod weights;
-pub mod module;
+pub mod module_info;
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -75,6 +77,7 @@ pub mod pallet {
 	use serde_with::{serde_as, DisplayFromStr};
 	use frame_support::inherent::Vec;
 	use scale_info::prelude::string::String;
+	use codec::Compact;
 
 
 	#[pallet::pallet]
@@ -143,7 +146,7 @@ pub mod pallet {
 	#[pallet::storage] // --- ITEM ( total_stake )
 	pub type TotalStake<T> = StorageValue<_, u64, ValueQuery>;
 	#[pallet::storage] // --- ITEM ( default_take )
-	pub type DefaultTake<T> = StorageValue<_, u16, ValueQuery, DefaultDefaultTake<T>>;
+	pub type DefaultTake<T> = StorageValue<_, u16, ValueQuery, DefaultAccountTake<T>>;
 	#[pallet::storage] // --- ITEM ( global_block_emission )
 	pub type BlockEmission<T> = StorageValue<_, u64, ValueQuery, DefaultBlockEmission<T>>;
 	#[pallet::storage] // --- ITEM ( total_issuance )
@@ -233,7 +236,7 @@ pub mod pallet {
 	}
 
 	#[pallet::storage] // --- MAP ( netuid, key ) --> module
-	pub(super) type Modules<T:Config> = StorageDoubleMap<_, Identity, u16, Blake2_128Concat, T::AccountId, Module, OptionQuery>;
+	pub(super) type Modules<T:Config> = StorageDoubleMap<_, Identity, u16, Blake2_128Concat, T::AccountId, ModuleInfo, OptionQuery>;
 
 	// Rate limiting
 	#[pallet::type_value]
@@ -252,11 +255,6 @@ pub mod pallet {
 
 	#[pallet::storage] // --- MAP ( netuid ) --> serving_rate_limit
 	pub type ServingRateLimit<T> = StorageMap<_, Identity, u16, u64, ValueQuery, DefaultServingRateLimit<T>> ;
-<<<<<<< HEAD
-=======
-	#[pallet::storage] // --- MAP ( netuid, key ) --> module
-	pub(super) type Modules<T:Config> = StorageDoubleMap<_, Identity, u16, Blake2_128Concat, T::AccountId, ModuleInfo, OptionQuery>;
->>>>>>> 96a67aa (fuck this wasm)
 
 	// =======================================
 	// ==== Network Hyperparam storage ====
@@ -472,8 +470,7 @@ pub mod pallet {
 
 			let mut next_uid = 0;
 
-			for (key) in self.stakes.iter() {
-
+			for (key, stake_uid) in self.stakes.iter() {
 				let (stake, uid) = stake_uid;
 
 				// Expand Yuma Consensus with new position.
@@ -534,6 +531,8 @@ pub mod pallet {
 	// Dispatchable functions must be annotated with a weight and must return a DispatchResult.
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
+
+		// use frame_support::inherent::Vec;
 
 		// --- Sets the caller weights for the incentive mechanism. The call can be
 		// made from the key account so is potentially insecure, however, the damage
@@ -702,9 +701,6 @@ pub mod pallet {
 		// 	* 'port' (u16):
 		// 		- The endpoint port information as a u16 encoded integer.
 		// 
-		// 	* 'ip_type' (u8):
-		// 		- The endpoint ip version as a u8, 4 or 6.
-		//
 		// 	* 'protocol' (u8):
 		// 		- UDP:1 or TCP:0 
 		//
@@ -743,7 +739,7 @@ pub mod pallet {
 			ip: u128, 
 			port: u16, 
 		) -> DispatchResult {
-			Self::do_serve_module( origin, netuid, version, ip, port ) 
+			Self::do_serve_module( origin, netuid, ip, port ) 
 		}
 
 		// ---- Registers a new module to the network. 

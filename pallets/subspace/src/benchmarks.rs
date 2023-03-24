@@ -183,7 +183,7 @@ benchmarks! {
     Subspace::<T>::set_max_allowed_uids( netuid, 4096 ); 
     assert_eq!(Subspace::<T>::get_max_allowed_uids(netuid), 4096);
 
-
+    let mut seed : u32 = 1; 
     let key: T::AccountId = account("Alice", 0, seed);
 
     assert_ok!( Subspace::<T>::do_registration(RawOrigin::Signed( key.clone() ).into(), netuid.try_into().unwrap()));
@@ -206,7 +206,7 @@ benchmarks! {
 
     Subspace::<T>::set_serving_rate_limit(netuid, 0);
 
-  }: serve_module(RawOrigin::Signed( caller.clone() ), netuid, ip, port, ip_type)
+  }: serve_module(RawOrigin::Signed( caller.clone() ), netuid, ip, port)
 
   benchmark_sudo_register {
     let caller: T::AccountId = whitelisted_caller::<AccountIdOf<T>>(); 

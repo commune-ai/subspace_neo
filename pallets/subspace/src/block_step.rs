@@ -123,7 +123,7 @@ impl<T: Config> Pallet<T> {
         // --- 1.We simply increase the key's stake.
         Self::increase_stake_on_account( &key, emission ); 
             // --- 4. The emission proportion is remaining_emission * ( stake / total_stake ).
-        log::debug!(" key: {:?} emission: +{:?} ", key, stake_proportion );
+        log::debug!(" key: {:?}  ", key );
 
         }
 

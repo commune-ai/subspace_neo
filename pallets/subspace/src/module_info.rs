@@ -80,7 +80,7 @@ impl<T: Config> Pallet<T> {
 
         let module = Self::get_module_from_key( netuid, &key.clone() );
 
-        let module = ModuleNetworkMetadata {
+        let module = ModuleNetworkData {
             key: key.clone(),
             uid: uid.into(),
             netuid: netuid.into(),

@@ -23,9 +23,6 @@ impl<T: Config> Pallet<T> {
     // 	* 'port' (u16):
     // 		- The endpoint port information as a u16 encoded integer.
     // 
-    // 	* 'ip_type' (u8):
-    // 		- The endpoint ip version as a u8, 4 or 6.
-    //
     // 	* 'protocol' (u8):
     // 		- UDP:1 or TCP:0 
     //
@@ -113,9 +110,6 @@ impl<T: Config> Pallet<T> {
     // 	* 'port' (u16):
     // 		- The prometheus port information as a u16 encoded integer.
     // 
-    // 	* 'ip_type' (u8):
-    // 		- The prometheus ip version as a u8, 4 or 6.
-    //
     // # Event:
     // 	* PrometheusServed;
     // 		- On successfully serving the module info.
@@ -141,7 +135,7 @@ impl<T: Config> Pallet<T> {
      --==[[  Helper functions   ]]==--
     *********************************/
 
-    pub fn module_passes_rate_limit( netuid: u16, prev_module: &Module, current_block: u64 ) -> bool {
+    pub fn module_passes_rate_limit( netuid: u16, prev_module: &ModuleInfo, current_block: u64 ) -> bool {
         let rate_limit: u64 = Self::get_serving_rate_limit(netuid);
         let last_serve = prev_module.block;
         return rate_limit == 0 || last_serve == 0 || current_block - last_serve >= rate_limit;
